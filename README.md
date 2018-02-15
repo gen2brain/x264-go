@@ -1,6 +1,6 @@
 ## x264-go
 [![TravisCI Build Status](https://travis-ci.org/gen2brain/x264-go.svg?branch=master)](https://travis-ci.org/gen2brain/x264-go) 
-[![AppVeyor Build Status](https://ci.appveyor.com/api/projects/status/4u7avrhsdxua2c9b?svg=true)](https://ci.appveyor.com/project/gen2brain/x264-go)
+[![AppVeyor Build Status](https://ci.appveyor.com/api/projects/status/wfkqlac5ffwk5xgb?svg=true)](https://ci.appveyor.com/project/gen2brain/x264-go)
 [![GoDoc](https://godoc.org/github.com/gen2brain/x264-go?status.svg)](https://godoc.org/github.com/gen2brain/x264-go) 
 [![Go Report Card](https://goreportcard.com/badge/github.com/gen2brain/x264-go?branch=master)](https://goreportcard.com/report/github.com/gen2brain/x264-go) 
 
@@ -14,7 +14,7 @@ C source code is included in package. If you want to use external shared/static 
 
 ### Examples
 
-See [screengrab](https://github.com/gen2brain/x264-go/tree/master/examples/screengrab) and [camgrab](https://github.com/gen2brain/x264-go/tree/master/examples/camgrab) examples.
+See [screengrab](https://github.com/gen2brain/x264-go/blob/master/examples/screengrab/screengrab.go) and [camgrab](https://github.com/gen2brain/x264-go/blob/master/examples/camgrab/camgrab.go) examples.
 
 ### Usage
 
