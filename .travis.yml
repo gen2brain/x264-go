@@ -4,4 +4,4 @@ go:
   - 1.9.x
 
 script:
- - go test -v ./...
+ - go test -v ./
