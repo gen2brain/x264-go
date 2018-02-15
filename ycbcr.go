@@ -16,6 +16,7 @@ func NewYCbCr(r image.Rectangle) *YCbCr {
 	return &YCbCr{image.NewYCbCr(r, image.YCbCrSubsampleRatio420)}
 }
 
+// Set sets pixel color.
 func (p *YCbCr) Set(x, y int, c color.Color) {
 	p.setYCbCr(x, y, p.ColorModel().Convert(c).(color.YCbCr))
 }

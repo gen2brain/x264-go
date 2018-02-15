@@ -587,7 +587,7 @@ type Param struct {
 	ISpsId int32
 	// VFR input. If 1, use timebase and timestamps for ratecontrol purposes. If 0, use fps only.
 	BVfrInput int32
-	// Use explicity set timebase for CFR.
+	// Use explicitly set timebase for CFR.
 	BPulldown int32
 	IFpsNum   uint32
 	IFpsDen   uint32
