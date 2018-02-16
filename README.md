@@ -14,7 +14,7 @@ C source code is included in package. If you want to use external shared/static 
 
 ### Examples
 
-See [screengrab](https://github.com/gen2brain/x264-go/blob/master/examples/screengrab/screengrab.go) and [camgrab](https://github.com/gen2brain/x264-go/blob/master/examples/camgrab/camgrab.go) examples.
+See [screengrab](https://github.com/gen2brain/x264-go/blob/master/examples/screengrab/screengrab.go) example.
 
 ### Usage
 
