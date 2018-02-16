@@ -3,6 +3,8 @@ language: go
 go:
   - 1.9.x
 
+gobuild_args: "-tags extlib"
+
 before_install:
    - sudo apt-get install libx264-dev libopencv-dev
 
