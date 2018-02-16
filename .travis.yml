@@ -6,7 +6,8 @@ go:
 gobuild_args: "-tags extlib"
 
 before_install:
-   - sudo apt-get install libx264-dev libopencv-dev
+   - sudo apt-get update -y
+   - sudo apt-get install libx264-dev libopencv-dev -y
 
 script:
  - go test -tags extlib -v ./
