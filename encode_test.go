@@ -64,7 +64,7 @@ func TestEncodeFlush(t *testing.T) {
 		Width:     640,
 		Height:    480,
 		FrameRate: 25,
-		Tune:      "zerolatency",
+		Tune:      "film",
 		Preset:    "fast",
 		Profile:   "high",
 		LogLevel:  LogDebug,
