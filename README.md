@@ -71,3 +71,7 @@ func main() {
 	}
 }
 ```
+
+## More
+
+For AAC encoder see [aac-go](https://github.com/gen2brain/aac-go).
