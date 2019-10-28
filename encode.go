@@ -51,6 +51,8 @@ type Encoder struct {
 
 	nnals int32
 	nals  []*x264c.Nal
+
+	picIn x264c.Picture
 }
 
 // NewEncoder returns new x264 encoder.
@@ -104,13 +106,28 @@ func NewEncoder(w io.Writer, opts *Options) (e *Encoder, err error) {
 		}
 	}
 
+	// Allocate on create instead while encoding
+	var picIn x264c.Picture
+	ret := x264c.PictureAlloc(&picIn, e.csp, int32(e.opts.Width), int32(e.opts.Height))
+	if ret < 0 {
+		err = fmt.Errorf("x264: cannot allocate picture")
+		return
+	}
+	e.picIn = picIn
+	defer func() {
+		// Cleanup if intialization fail
+		if err != nil {
+			x264c.PictureClean(&picIn)
+		}
+	}()
+
 	e.e = x264c.EncoderOpen(&param)
 	if e.e == nil {
 		err = fmt.Errorf("x264: cannot open the encoder")
 		return
 	}
 
-	ret := x264c.EncoderHeaders(e.e, e.nals, &e.nnals)
+	ret = x264c.EncoderHeaders(e.e, e.nals, &e.nnals)
 	if ret < 0 {
 		err = fmt.Errorf("x264: cannot encode headers")
 		return
@@ -134,26 +151,16 @@ func NewEncoder(w io.Writer, opts *Options) (e *Encoder, err error) {
 
 // Encode encodes image.
 func (e *Encoder) Encode(im image.Image) (err error) {
-	var picIn, picOut x264c.Picture
+	var picOut x264c.Picture
 
 	e.img.ToYCbCr(im)
 
-	ret := x264c.PictureAlloc(&picIn, e.csp, int32(e.opts.Width), int32(e.opts.Height))
-	if ret < 0 {
-		err = fmt.Errorf("x264: cannot allocate picture")
-		return
-	}
-
-	defer x264c.PictureClean(&picIn)
-
-	picIn.Img.Plane[0] = C.CBytes(e.img.Y)
-	picIn.Img.Plane[1] = C.CBytes(e.img.Cb)
-	picIn.Img.Plane[2] = C.CBytes(e.img.Cr)
-
+	picIn := e.picIn
+	e.img.CopyToCPointer(picIn.Img.Plane[0], picIn.Img.Plane[1], picIn.Img.Plane[2])
 	picIn.IPts = e.pts
 	e.pts++
 
-	ret = x264c.EncoderEncode(e.e, e.nals, &e.nnals, &picIn, &picOut)
+	ret := x264c.EncoderEncode(e.e, e.nals, &e.nnals, &picIn, &picOut)
 	if ret < 0 {
 		err = fmt.Errorf("x264: cannot encode picture")
 		return
@@ -207,6 +214,8 @@ func (e *Encoder) Flush() (err error) {
 
 // Close closes encoder.
 func (e *Encoder) Close() error {
+	picIn := e.picIn
+	x264c.PictureClean(&picIn)
 	x264c.EncoderClose(e.e)
 	return nil
 }
