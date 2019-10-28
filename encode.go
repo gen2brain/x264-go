@@ -8,7 +8,7 @@ import (
 	"image"
 	"io"
 
-	"github.com/gen2brain/x264-go/x264c"
+	"github.com/thiekus/x264-go/x264c"
 )
 
 // Logging constants.

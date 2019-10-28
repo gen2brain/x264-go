@@ -8,7 +8,7 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/gen2brain/x264-go"
+	"github.com/thiekus/x264-go"
 	"github.com/kbinani/screenshot"
 )
 

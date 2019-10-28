@@ -6,7 +6,7 @@ import (
 	_ "image/jpeg"
 	"os"
 
-	"github.com/gen2brain/x264-go"
+	"github.com/thiekus/x264-go"
 )
 
 func main() {
