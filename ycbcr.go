@@ -47,7 +47,7 @@ func (p *YCbCr) ToYCbCr(src image.Image) {
 
 // Copy arbitary YCbCr to buffer that allocated by x264_picture_alloc()
 func (p *YCbCr) CopyToCPointer(CY, CCb, CCr unsafe.Pointer) {
-	C.memcpy(CY, unsafe.Pointer(&p.Y[0]), C.ulong(uint(len(p.Y))))
-	C.memcpy(CCb, unsafe.Pointer(&p.Cb[0]), C.ulong(uint(len(p.Cb))))
-	C.memcpy(CCr, unsafe.Pointer(&p.Cr[0]), C.ulong(uint(len(p.Cr))))
+	C.memcpy(CY, unsafe.Pointer(&p.Y[0]), C.size_t(uint(len(p.Y))))
+	C.memcpy(CCb, unsafe.Pointer(&p.Cb[0]), C.size_t(uint(len(p.Cb))))
+	C.memcpy(CCr, unsafe.Pointer(&p.Cr[0]), C.size_t(uint(len(p.Cr))))
 }
