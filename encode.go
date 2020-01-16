@@ -85,6 +85,7 @@ func NewEncoder(w io.Writer, opts *Options) (e *Encoder, err error) {
 	param.BVfrInput = 0
 	param.BRepeatHeaders = 1
 	param.BAnnexb = 1
+	param.Analyse.BPsnr = 1
 
 	param.ILogLevel = e.opts.LogLevel
 
