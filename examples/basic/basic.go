@@ -4,9 +4,10 @@ import (
 	"fmt"
 	"image"
 	_ "image/jpeg"
+	"log"
 	"os"
 
-	"github.com/gen2brain/x264-go"
+	"github.com/kennykarnama/x264-go"
 )
 
 func main() {
@@ -48,9 +49,10 @@ func main() {
 		os.Exit(1)
 	}
 
-	err = enc.Encode(img)
+	out, err := enc.Encode(img)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
+	log.Printf("Avg PSNR: %v", out.Prop.FPsnrAvg)
 }

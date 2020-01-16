@@ -4,12 +4,13 @@ import (
 	"bytes"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"os"
 	"os/signal"
 	"syscall"
 
-	"github.com/gen2brain/x264-go"
 	"github.com/kbinani/screenshot"
+	"github.com/kennykarnama/x264-go"
 )
 
 func main() {
@@ -57,10 +58,11 @@ func main() {
 				continue
 			}
 
-			err = enc.Encode(img)
+			out, err := enc.Encode(img)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "%s\n", err.Error())
 			}
+			log.Printf("PSNR: %v", out.Prop.FPsnr)
 		}
 	}
 }
