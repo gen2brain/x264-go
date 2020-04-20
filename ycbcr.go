@@ -1,5 +1,10 @@
 package x264
 
+// #include <string.h>
+import "C"
+
+import "unsafe"
+
 import (
 	"image"
 	"image/color"
@@ -38,4 +43,11 @@ func (p *YCbCr) setYCbCr(x, y int, c color.YCbCr) {
 func (p *YCbCr) ToYCbCr(src image.Image) {
 	bounds := src.Bounds()
 	draw.Draw(p, bounds, src, bounds.Min, draw.Src)
+}
+
+// Copy arbitary YCbCr to buffer that allocated by x264_picture_alloc()
+func (p *YCbCr) CopyToCPointer(CY, CCb, CCr unsafe.Pointer) {
+	C.memcpy(CY, unsafe.Pointer(&p.Y[0]), C.ulong(uint(len(p.Y))))
+	C.memcpy(CCb, unsafe.Pointer(&p.Cb[0]), C.ulong(uint(len(p.Cb))))
+	C.memcpy(CCr, unsafe.Pointer(&p.Cr[0]), C.ulong(uint(len(p.Cr))))
 }
