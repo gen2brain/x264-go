@@ -1,7 +1,7 @@
 /*****************************************************************************
  * osdep.h: platform-specific code
  *****************************************************************************
- * Copyright (C) 2007-2017 x264 project
+ * Copyright (C) 2007-2021 x264 project
  *
  * Authors: Loren Merritt <lorenm@u.washington.edu>
  *          Laurent Aimar <fenrir@via.ecp.fr>
@@ -34,6 +34,7 @@
 #include <sys/stat.h>
 #include <inttypes.h>
 #include <stdarg.h>
+#include <stdlib.h>
 
 //#include "config.h"
 
@@ -42,6 +43,13 @@
 #else
 #include <math.h>
 #endif
+
+#ifdef _WIN32
+#include <windows.h>
+#include <io.h>
+#endif
+
+#include "x264.h"
 
 #if !HAVE_LOG2F
 #define log2f(x) (logf(x)/0.693147180559945f)
@@ -54,12 +62,6 @@
 #define strncasecmp _strnicmp
 #define strtok_r strtok_s
 #define S_ISREG(x) (((x) & S_IFMT) == S_IFREG)
-#if _MSC_VER < 1900
-int x264_snprintf( char *s, size_t n, const char *fmt, ... );
-int x264_vsnprintf( char *s, size_t n, const char *fmt, va_list arg );
-#define snprintf  x264_snprintf
-#define vsnprintf x264_vsnprintf
-#endif
 #else
 #include <strings.h>
 #endif
@@ -72,18 +74,126 @@ int x264_vsnprintf( char *s, size_t n, const char *fmt, va_list arg );
 #define isfinite finite
 #endif
 
-#ifdef _WIN32
-#ifndef strtok_r
+#if !HAVE_STRTOK_R && !defined(strtok_r)
 #define strtok_r(str,delim,save) strtok(str,delim)
 #endif
 
-#define utf8_to_utf16( utf8, utf16 )\
-    MultiByteToWideChar( CP_UTF8, MB_ERR_INVALID_CHARS, utf8, -1, utf16, sizeof(utf16)/sizeof(wchar_t) )
-FILE *x264_fopen( const char *filename, const char *mode );
-int x264_rename( const char *oldname, const char *newname );
+#if defined(_MSC_VER) && _MSC_VER < 1900
+/* MSVC pre-VS2015 has broken snprintf/vsnprintf implementations which are incompatible with C99. */
+static inline int x264_vsnprintf( char *s, size_t n, const char *fmt, va_list arg )
+{
+    int length = -1;
+
+    if( n )
+    {
+        va_list arg2;
+        va_copy( arg2, arg );
+        length = _vsnprintf( s, n, fmt, arg2 );
+        va_end( arg2 );
+
+        /* _(v)snprintf adds a null-terminator only if the length is less than the buffer size. */
+        if( length < 0 || length >= n )
+            s[n-1] = '\0';
+    }
+
+    /* _(v)snprintf returns a negative number if the length is greater than the buffer size. */
+    if( length < 0 )
+        return _vscprintf( fmt, arg );
+
+    return length;
+}
+
+static inline int x264_snprintf( char *s, size_t n, const char *fmt, ... )
+{
+    va_list arg;
+    va_start( arg, fmt );
+    int length = x264_vsnprintf( s, n, fmt, arg );
+    va_end( arg );
+    return length;
+}
+
+#define snprintf  x264_snprintf
+#define vsnprintf x264_vsnprintf
+#endif
+
+#ifdef _WIN32
+/* Functions for dealing with Unicode on Windows. */
+static inline wchar_t *x264_utf8_to_utf16( const char *utf8 )
+{
+    int len = MultiByteToWideChar( CP_UTF8, MB_ERR_INVALID_CHARS, utf8, -1, NULL, 0 );
+    if( len )
+    {
+        wchar_t *utf16 = malloc( len * sizeof( wchar_t ) );
+        if( utf16 )
+        {
+            if( MultiByteToWideChar( CP_UTF8, MB_ERR_INVALID_CHARS, utf8, -1, utf16, len ) )
+                return utf16;
+            free( utf16 );
+        }
+    }
+    return NULL;
+}
+
+static inline wchar_t *x264_utf8_to_utf16_try_buf( const char *utf8, wchar_t *buf_utf16, int buf_len ) {
+    if( MultiByteToWideChar( CP_UTF8, MB_ERR_INVALID_CHARS, utf8, -1, buf_utf16, buf_len ) )
+        return buf_utf16;
+    return x264_utf8_to_utf16( utf8 );
+}
+
+#define x264_fopen( filename, mode ) x264_fopen_internal( filename, L##mode )
+static inline FILE *x264_fopen_internal( const char *filename, const wchar_t *mode_utf16 )
+{
+    FILE *f = NULL;
+    wchar_t filename_buf[MAX_PATH];
+    wchar_t *filename_utf16 = x264_utf8_to_utf16_try_buf( filename, filename_buf, MAX_PATH );
+    if( filename_utf16 )
+    {
+        f = _wfopen( filename_utf16, mode_utf16 );
+        if( filename_utf16 != filename_buf )
+            free( filename_utf16 );
+    }
+    return f;
+}
+
+static inline int x264_rename( const char *oldname, const char *newname )
+{
+    int ret = -1;
+    wchar_t oldname_buf[MAX_PATH];
+    wchar_t *oldname_utf16 = x264_utf8_to_utf16_try_buf( oldname, oldname_buf, MAX_PATH );
+    if( oldname_utf16 )
+    {
+        wchar_t newname_buf[MAX_PATH];
+        wchar_t *newname_utf16 = x264_utf8_to_utf16_try_buf( newname, newname_buf, MAX_PATH );
+        if( newname_utf16 )
+        {
+            /* POSIX says that rename() removes the destination, but Win32 doesn't. */
+            _wunlink( newname_utf16 );
+            ret = _wrename( oldname_utf16, newname_utf16 );
+            if( newname_utf16 != newname_buf )
+                free( newname_utf16 );
+        }
+        if( oldname_utf16 != oldname_buf )
+            free( oldname_utf16 );
+    }
+    return ret;
+}
+
 #define x264_struct_stat struct _stati64
 #define x264_fstat _fstati64
-int x264_stat( const char *path, x264_struct_stat *buf );
+
+static inline int x264_stat( const char *path, x264_struct_stat *buf )
+{
+    int ret = -1;
+    wchar_t path_buf[MAX_PATH];
+    wchar_t *path_utf16 = x264_utf8_to_utf16_try_buf( path, path_buf, MAX_PATH );
+    if( path_utf16 )
+    {
+        ret = _wstati64( path_utf16, buf );
+        if( path_utf16 != path_buf )
+            free( path_utf16 );
+    }
+    return ret;
+}
 #else
 #define x264_fopen       fopen
 #define x264_rename      rename
@@ -93,15 +203,81 @@ int x264_stat( const char *path, x264_struct_stat *buf );
 #endif
 
 /* mdate: return the current date in microsecond */
-int64_t x264_mdate( void );
+X264_API int64_t x264_mdate( void );
 
 #if defined(_WIN32) && !HAVE_WINRT
-int x264_vfprintf( FILE *stream, const char *format, va_list arg );
-int x264_is_pipe( const char *path );
+static inline int x264_vfprintf( FILE *stream, const char *format, va_list arg )
+{
+    HANDLE console = NULL;
+    DWORD mode;
+
+    if( stream == stdout )
+        console = GetStdHandle( STD_OUTPUT_HANDLE );
+    else if( stream == stderr )
+        console = GetStdHandle( STD_ERROR_HANDLE );
+
+    /* Only attempt to convert to UTF-16 when writing to a non-redirected console screen buffer. */
+    if( GetConsoleMode( console, &mode ) )
+    {
+        char buf[4096];
+        wchar_t buf_utf16[4096];
+        va_list arg2;
+
+        va_copy( arg2, arg );
+        int length = vsnprintf( buf, sizeof(buf), format, arg2 );
+        va_end( arg2 );
+
+        if( length > 0 && (unsigned)length < sizeof(buf) )
+        {
+            /* WriteConsoleW is the most reliable way to output Unicode to a console. */
+            int length_utf16 = MultiByteToWideChar( CP_UTF8, 0, buf, length, buf_utf16, sizeof(buf_utf16)/sizeof(wchar_t) );
+            DWORD written;
+            WriteConsoleW( console, buf_utf16, length_utf16, &written, NULL );
+            return length;
+        }
+    }
+    return vfprintf( stream, format, arg );
+}
+
+static inline int x264_is_regular_file_path( const char *path )
+{
+    int ret = -1;
+    wchar_t path_buf[MAX_PATH];
+    wchar_t *path_utf16 = x264_utf8_to_utf16_try_buf( path, path_buf, MAX_PATH );
+    if( path_utf16 )
+    {
+        x264_struct_stat buf;
+        if( _wstati64( path_utf16, &buf ) )
+            ret = !WaitNamedPipeW( path_utf16, 0 );
+        else
+            ret = S_ISREG( buf.st_mode );
+        if( path_utf16 != path_buf )
+            free( path_utf16 );
+    }
+    return ret;
+}
 #else
 #define x264_vfprintf vfprintf
-#define x264_is_pipe(x) 0
+
+static inline int x264_is_regular_file_path( const char *filename )
+{
+    x264_struct_stat file_stat;
+    if( x264_stat( filename, &file_stat ) )
+        return 1;
+    return S_ISREG( file_stat.st_mode );
+}
 #endif
+
+static inline int x264_is_regular_file( FILE *filehandle )
+{
+    x264_struct_stat file_stat;
+    if( x264_fstat( fileno( filehandle ), &file_stat ) )
+        return 1;
+    return S_ISREG( file_stat.st_mode );
+}
+
+#define x264_glue3_expand(x,y,z) x##_##y##_##z
+#define x264_glue3(x,y,z) x264_glue3_expand(x,y,z)
 
 #ifdef _MSC_VER
 #define DECLARE_ALIGNED( var, n ) __declspec(align(n)) var
@@ -158,6 +334,12 @@ int x264_is_pipe( const char *path );
 #define ALIGNED_64 ALIGNED_16
 #define ALIGNED_ARRAY_32 ALIGNED_ARRAY_16
 #define ALIGNED_ARRAY_64 ALIGNED_ARRAY_16
+#endif
+
+#if STACK_ALIGNMENT > 16 || (ARCH_X86 && STACK_ALIGNMENT > 4)
+#define REALIGN_STACK __attribute__((force_align_arg_pointer))
+#else
+#define REALIGN_STACK
 #endif
 
 #if defined(__GNUC__) && (__GNUC__ > 3 || __GNUC__ == 3 && __GNUC_MINOR__ > 0)
@@ -244,7 +426,7 @@ static inline int x264_pthread_create( x264_pthread_t *t, void *a, void *(*f)(vo
 #endif
 
 #if HAVE_WIN32THREAD || PTW32_STATIC_LIB
-int x264_threading_init( void );
+X264_API int x264_threading_init( void );
 #else
 #define x264_threading_init() 0
 #endif
@@ -308,7 +490,7 @@ static ALWAYS_INLINE uint64_t endian_fix64( uint64_t x )
     return endian_fix32(x>>32) + ((uint64_t)endian_fix32(x)<<32);
 }
 #endif
-static ALWAYS_INLINE intptr_t endian_fix( intptr_t x )
+static ALWAYS_INLINE uintptr_t endian_fix( uintptr_t x )
 {
     return WORD_SIZE == 8 ? endian_fix64(x) : endian_fix32(x);
 }
@@ -319,7 +501,7 @@ static ALWAYS_INLINE uint16_t endian_fix16( uint16_t x )
 #endif
 
 /* For values with 4 bits or less. */
-static int ALWAYS_INLINE x264_ctz_4bit( uint32_t x )
+static ALWAYS_INLINE int x264_ctz_4bit( uint32_t x )
 {
     static uint8_t lut[16] = {4,0,1,0,2,0,1,0,3,0,1,0,2,0,1,0};
     return lut[x];
@@ -329,7 +511,7 @@ static int ALWAYS_INLINE x264_ctz_4bit( uint32_t x )
 #define x264_clz(x) __builtin_clz(x)
 #define x264_ctz(x) __builtin_ctz(x)
 #else
-static int ALWAYS_INLINE x264_clz( uint32_t x )
+static ALWAYS_INLINE int x264_clz( uint32_t x )
 {
     static uint8_t lut[16] = {4,3,2,2,1,1,1,1,0,0,0,0,0,0,0,0};
     int y, z = (((x >> 16) - 1) >> 27) & 16;
@@ -341,7 +523,7 @@ static int ALWAYS_INLINE x264_clz( uint32_t x )
     return z + lut[x];
 }
 
-static int ALWAYS_INLINE x264_ctz( uint32_t x )
+static ALWAYS_INLINE int x264_ctz( uint32_t x )
 {
     static uint8_t lut[16] = {4,0,1,0,2,0,1,0,3,0,1,0,2,0,1,0};
     int y, z = (((x & 0xffff) - 1) >> 27) & 16;
@@ -394,21 +576,5 @@ static ALWAYS_INLINE void x264_prefetch( void *p )
 #else
 #define x264_lower_thread_priority(p)
 #endif
-
-static inline int x264_is_regular_file( FILE *filehandle )
-{
-    x264_struct_stat file_stat;
-    if( x264_fstat( fileno( filehandle ), &file_stat ) )
-        return 1;
-    return S_ISREG( file_stat.st_mode );
-}
-
-static inline int x264_is_regular_file_path( const char *filename )
-{
-    x264_struct_stat file_stat;
-    if( x264_stat( filename, &file_stat ) )
-        return !x264_is_pipe( filename );
-    return S_ISREG( file_stat.st_mode );
-}
 
 #endif /* X264_OSDEP_H */

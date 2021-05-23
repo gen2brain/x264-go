@@ -1,7 +1,7 @@
 /*****************************************************************************
  * me.h: motion estimation
  *****************************************************************************
- * Copyright (C) 2003-2017 x264 project
+ * Copyright (C) 2003-2021 x264 project
  *
  * Authors: Loren Merritt <lorenm@u.washington.edu>
  *          Laurent Aimar <fenrir@via.ecp.fr>
@@ -24,8 +24,8 @@
  * For more information, contact us at licensing@x264.com.
  *****************************************************************************/
 
-#ifndef X264_ME_H
-#define X264_ME_H
+#ifndef X264_ENCODER_ME_H
+#define X264_ENCODER_ME_H
 
 #define COST_MAX (1<<28)
 #define COST_MAX64 (1ULL<<60)
@@ -52,18 +52,25 @@ typedef struct
     /* output */
     int cost_mv;        /* lambda * nbits for the chosen mv */
     int cost;           /* satd + lambda * nbits */
-    ALIGNED_4( int16_t mv[2] );
+    ALIGNED_8( int16_t mv[2] );
 } ALIGNED_64( x264_me_t );
 
+#define x264_me_search_ref x264_template(me_search_ref)
 void x264_me_search_ref( x264_t *h, x264_me_t *m, int16_t (*mvc)[2], int i_mvc, int *p_fullpel_thresh );
 #define x264_me_search( h, m, mvc, i_mvc )\
     x264_me_search_ref( h, m, mvc, i_mvc, NULL )
 
+#define x264_me_refine_qpel x264_template(me_refine_qpel)
 void x264_me_refine_qpel( x264_t *h, x264_me_t *m );
+#define x264_me_refine_qpel_refdupe x264_template(me_refine_qpel_refdupe)
 void x264_me_refine_qpel_refdupe( x264_t *h, x264_me_t *m, int *p_halfpel_thresh );
+#define x264_me_refine_qpel_rd x264_template(me_refine_qpel_rd)
 void x264_me_refine_qpel_rd( x264_t *h, x264_me_t *m, int i_lambda2, int i4, int i_list );
+#define x264_me_refine_bidir_rd x264_template(me_refine_bidir_rd)
 void x264_me_refine_bidir_rd( x264_t *h, x264_me_t *m0, x264_me_t *m1, int i_weight, int i8, int i_lambda2 );
+#define x264_me_refine_bidir_satd x264_template(me_refine_bidir_satd)
 void x264_me_refine_bidir_satd( x264_t *h, x264_me_t *m0, x264_me_t *m1, int i_weight );
+#define x264_rd_cost_part x264_template(rd_cost_part)
 uint64_t x264_rd_cost_part( x264_t *h, int i_lambda2, int i8, int i_pixel );
 
 #define COPY1_IF_LT(x,y)\

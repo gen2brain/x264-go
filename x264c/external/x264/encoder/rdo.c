@@ -1,7 +1,7 @@
 /*****************************************************************************
  * rdo.c: rate-distortion optimization
  *****************************************************************************
- * Copyright (C) 2005-2017 x264 project
+ * Copyright (C) 2005-2021 x264 project
  *
  * Authors: Loren Merritt <lorenm@u.washington.edu>
  *          Fiona Glaser <fiona@x264.com>
@@ -32,7 +32,9 @@
 
 /* Transition and size tables for abs<9 MVD and residual coding */
 /* Consist of i_prefix-2 1s, one zero, and a bypass sign bit */
+#define x264_cabac_transition_unary x264_template(cabac_transition_unary)
 uint8_t x264_cabac_transition_unary[15][128];
+#define x264_cabac_size_unary x264_template(cabac_size_unary)
 uint16_t x264_cabac_size_unary[15][128];
 /* Transition and size tables for abs>9 MVD */
 /* Consist of 5 1s and a bypass sign bit */
@@ -46,7 +48,8 @@ static uint16_t cabac_size_5ones[128];
 #define bs_write_ue(s,v)   ((s)->i_bits_encoded += bs_size_ue(v))
 #define bs_write_se(s,v)   ((s)->i_bits_encoded += bs_size_se(v))
 #define bs_write_te(s,v,l) ((s)->i_bits_encoded += bs_size_te(v,l))
-#define x264_macroblock_write_cavlc  static x264_macroblock_size_cavlc
+#undef  x264_macroblock_write_cavlc
+#define x264_macroblock_write_cavlc  static macroblock_size_cavlc
 #include "cavlc.c"
 
 /* CABAC: not exactly the same. x264_cabac_size_decision() keeps track of
@@ -55,12 +58,14 @@ static uint16_t cabac_size_5ones[128];
 #undef  x264_cabac_encode_decision_noup
 #undef  x264_cabac_encode_bypass
 #undef  x264_cabac_encode_terminal
+#undef  x264_cabac_encode_ue_bypass
 #define x264_cabac_encode_decision(c,x,v) x264_cabac_size_decision(c,x,v)
 #define x264_cabac_encode_decision_noup(c,x,v) x264_cabac_size_decision_noup(c,x,v)
 #define x264_cabac_encode_terminal(c)     ((c)->f8_bits_encoded += 7)
 #define x264_cabac_encode_bypass(c,v)     ((c)->f8_bits_encoded += 256)
 #define x264_cabac_encode_ue_bypass(c,e,v) ((c)->f8_bits_encoded += (bs_size_ue_big(v+(1<<e)-1)-e)<<8)
-#define x264_macroblock_write_cabac  static x264_macroblock_size_cabac
+#undef  x264_macroblock_write_cabac
+#define x264_macroblock_write_cabac  static macroblock_size_cabac
 #include "cabac.c"
 
 #define COPY_CABAC h->mc.memcpy_aligned( &cabac_tmp.f8_bits_encoded, &h->cabac.f8_bits_encoded, \
@@ -91,7 +96,6 @@ static ALWAYS_INLINE int cached_satd( x264_t *h, int size, int x, int y )
     static const uint8_t satd_shift_x[3] = {3,   2,   2};
     static const uint8_t satd_shift_y[3] = {2-1, 3-2, 2-2};
     static const uint8_t  satd_offset[3] = {0,   8,   16};
-    ALIGNED_16( static pixel zero[16] ) = {0};
     int cache_index = (x >> satd_shift_x[size - PIXEL_8x4]) + (y >> satd_shift_y[size - PIXEL_8x4])
                     + satd_offset[size - PIXEL_8x4];
     int res = h->mb.pic.fenc_satd_cache[cache_index];
@@ -100,8 +104,8 @@ static ALWAYS_INLINE int cached_satd( x264_t *h, int size, int x, int y )
     else
     {
         pixel *fenc = h->mb.pic.p_fenc[0] + x + y*FENC_STRIDE;
-        int dc = h->pixf.sad[size]( fenc, FENC_STRIDE, zero, 0 ) >> 1;
-        res = h->pixf.satd[size]( fenc, FENC_STRIDE, zero, 0 ) - dc;
+        int dc = h->pixf.sad[size]( fenc, FENC_STRIDE, (pixel*)x264_zero, 0 ) >> 1;
+        res = h->pixf.satd[size]( fenc, FENC_STRIDE, (pixel*)x264_zero, 0 ) - dc;
         h->mb.pic.fenc_satd_cache[cache_index] = res + 1;
         return res;
     }
@@ -118,7 +122,6 @@ static ALWAYS_INLINE int cached_satd( x264_t *h, int size, int x, int y )
 
 static inline int ssd_plane( x264_t *h, int size, int p, int x, int y )
 {
-    ALIGNED_16( static pixel zero[16] ) = {0};
     int satd = 0;
     pixel *fdec = h->mb.pic.p_fdec[p] + x + y*FDEC_STRIDE;
     pixel *fenc = h->mb.pic.p_fenc[p] + x + y*FENC_STRIDE;
@@ -135,8 +138,8 @@ static inline int ssd_plane( x264_t *h, int size, int p, int x, int y )
         }
         else
         {
-            int dc = h->pixf.sad[size]( fdec, FDEC_STRIDE, zero, 0 ) >> 1;
-            satd = abs(h->pixf.satd[size]( fdec, FDEC_STRIDE, zero, 0 ) - dc - cached_satd( h, size, x, y ));
+            int dc = h->pixf.sad[size]( fdec, FDEC_STRIDE, (pixel*)x264_zero, 0 ) >> 1;
+            satd = abs(h->pixf.satd[size]( fdec, FDEC_STRIDE, (pixel*)x264_zero, 0 ) - dc - cached_satd( h, size, x, y ));
         }
         satd = (satd * h->mb.i_psy_rd * h->mb.i_psy_rd_lambda + 128) >> 8;
     }
@@ -145,13 +148,17 @@ static inline int ssd_plane( x264_t *h, int size, int p, int x, int y )
 
 static inline int ssd_mb( x264_t *h )
 {
-    int chroma_size = h->luma2chroma_pixel[PIXEL_16x16];
-    int chroma_ssd = ssd_plane(h, chroma_size, 1, 0, 0) + ssd_plane(h, chroma_size, 2, 0, 0);
-    chroma_ssd = ((uint64_t)chroma_ssd * h->mb.i_chroma_lambda2_offset + 128) >> 8;
-    return ssd_plane(h, PIXEL_16x16, 0, 0, 0) + chroma_ssd;
+    int i_ssd = ssd_plane( h, PIXEL_16x16, 0, 0, 0 );
+    if( CHROMA_FORMAT )
+    {
+        int chroma_size = h->luma2chroma_pixel[PIXEL_16x16];
+        int chroma_ssd = ssd_plane( h, chroma_size, 1, 0, 0 ) + ssd_plane( h, chroma_size, 2, 0, 0 );
+        i_ssd += ((uint64_t)chroma_ssd * h->mb.i_chroma_lambda2_offset + 128) >> 8;
+    }
+    return i_ssd;
 }
 
-static int x264_rd_cost_mb( x264_t *h, int i_lambda2 )
+static int rd_cost_mb( x264_t *h, int i_lambda2 )
 {
     int b_transform_bak = h->mb.b_transform_8x8;
     int i_ssd;
@@ -173,12 +180,12 @@ static int x264_rd_cost_mb( x264_t *h, int i_lambda2 )
     {
         x264_cabac_t cabac_tmp;
         COPY_CABAC;
-        x264_macroblock_size_cabac( h, &cabac_tmp );
+        macroblock_size_cabac( h, &cabac_tmp );
         i_bits = ( (uint64_t)cabac_tmp.f8_bits_encoded * i_lambda2 + 32768 ) >> 16;
     }
     else
     {
-        x264_macroblock_size_cavlc( h );
+        macroblock_size_cavlc( h );
         i_bits = ( (uint64_t)h->out.bs.i_bits_encoded * i_lambda2 + 128 ) >> 8;
     }
 
@@ -190,7 +197,7 @@ static int x264_rd_cost_mb( x264_t *h, int i_lambda2 )
 
 /* partition RD functions use 8 bits more precision to avoid large rounding errors at low QPs */
 
-static uint64_t x264_rd_cost_subpart( x264_t *h, int i_lambda2, int i4, int i_pixel )
+static uint64_t rd_cost_subpart( x264_t *h, int i_lambda2, int i4, int i_pixel )
 {
     uint64_t i_ssd, i_bits;
 
@@ -213,11 +220,11 @@ static uint64_t x264_rd_cost_subpart( x264_t *h, int i_lambda2, int i4, int i_pi
     {
         x264_cabac_t cabac_tmp;
         COPY_CABAC;
-        x264_subpartition_size_cabac( h, &cabac_tmp, i4, i_pixel );
+        subpartition_size_cabac( h, &cabac_tmp, i4, i_pixel );
         i_bits = ( (uint64_t)cabac_tmp.f8_bits_encoded * i_lambda2 + 128 ) >> 8;
     }
     else
-        i_bits = x264_subpartition_size_cavlc( h, i4, i_pixel );
+        i_bits = subpartition_size_cavlc( h, i4, i_pixel );
 
     return (i_ssd<<8) + i_bits;
 }
@@ -229,12 +236,12 @@ uint64_t x264_rd_cost_part( x264_t *h, int i_lambda2, int i4, int i_pixel )
 
     if( i_pixel == PIXEL_16x16 )
     {
-        int i_cost = x264_rd_cost_mb( h, i_lambda2 );
+        int i_cost = rd_cost_mb( h, i_lambda2 );
         return i_cost;
     }
 
     if( i_pixel > PIXEL_8x8 )
-        return x264_rd_cost_subpart( h, i_lambda2, i4, i_pixel );
+        return rd_cost_subpart( h, i_lambda2, i4, i_pixel );
 
     h->mb.i_cbp_luma = 0;
 
@@ -247,25 +254,28 @@ uint64_t x264_rd_cost_part( x264_t *h, int i_lambda2, int i4, int i_pixel )
     int ssd_x = 8*(i8&1);
     int ssd_y = 8*(i8>>1);
     i_ssd = ssd_plane( h, i_pixel, 0, ssd_x, ssd_y );
-    int chromapix = h->luma2chroma_pixel[i_pixel];
-    int chromassd = ssd_plane( h, chromapix, 1, ssd_x>>CHROMA_H_SHIFT, ssd_y>>CHROMA_V_SHIFT )
-                  + ssd_plane( h, chromapix, 2, ssd_x>>CHROMA_H_SHIFT, ssd_y>>CHROMA_V_SHIFT );
-    i_ssd += ((uint64_t)chromassd * h->mb.i_chroma_lambda2_offset + 128) >> 8;
+    if( CHROMA_FORMAT )
+    {
+        int chroma_size = h->luma2chroma_pixel[i_pixel];
+        int chroma_ssd = ssd_plane( h, chroma_size, 1, ssd_x>>CHROMA_H_SHIFT, ssd_y>>CHROMA_V_SHIFT )
+                       + ssd_plane( h, chroma_size, 2, ssd_x>>CHROMA_H_SHIFT, ssd_y>>CHROMA_V_SHIFT );
+        i_ssd += ((uint64_t)chroma_ssd * h->mb.i_chroma_lambda2_offset + 128) >> 8;
+    }
 
     if( h->param.b_cabac )
     {
         x264_cabac_t cabac_tmp;
         COPY_CABAC;
-        x264_partition_size_cabac( h, &cabac_tmp, i8, i_pixel );
+        partition_size_cabac( h, &cabac_tmp, i8, i_pixel );
         i_bits = ( (uint64_t)cabac_tmp.f8_bits_encoded * i_lambda2 + 128 ) >> 8;
     }
     else
-        i_bits = (uint64_t)x264_partition_size_cavlc( h, i8, i_pixel ) * i_lambda2;
+        i_bits = (uint64_t)partition_size_cavlc( h, i8, i_pixel ) * i_lambda2;
 
     return (i_ssd<<8) + i_bits;
 }
 
-static uint64_t x264_rd_cost_i8x8( x264_t *h, int i_lambda2, int i8, int i_mode, pixel edge[4][32] )
+static uint64_t rd_cost_i8x8( x264_t *h, int i_lambda2, int i8, int i_mode, pixel edge[4][32] )
 {
     uint64_t i_ssd, i_bits;
     int plane_count = CHROMA444 ? 3 : 1;
@@ -292,16 +302,16 @@ static uint64_t x264_rd_cost_i8x8( x264_t *h, int i_lambda2, int i8, int i_mode,
     {
         x264_cabac_t cabac_tmp;
         COPY_CABAC;
-        x264_partition_i8x8_size_cabac( h, &cabac_tmp, i8, i_mode );
+        partition_i8x8_size_cabac( h, &cabac_tmp, i8, i_mode );
         i_bits = ( (uint64_t)cabac_tmp.f8_bits_encoded * i_lambda2 + 128 ) >> 8;
     }
     else
-        i_bits = (uint64_t)x264_partition_i8x8_size_cavlc( h, i8, i_mode ) * i_lambda2;
+        i_bits = (uint64_t)partition_i8x8_size_cavlc( h, i8, i_mode ) * i_lambda2;
 
     return (i_ssd<<8) + i_bits;
 }
 
-static uint64_t x264_rd_cost_i4x4( x264_t *h, int i_lambda2, int i4, int i_mode )
+static uint64_t rd_cost_i4x4( x264_t *h, int i_lambda2, int i4, int i_mode )
 {
     uint64_t i_ssd, i_bits;
     int plane_count = CHROMA444 ? 3 : 1;
@@ -326,16 +336,16 @@ static uint64_t x264_rd_cost_i4x4( x264_t *h, int i_lambda2, int i4, int i_mode 
     {
         x264_cabac_t cabac_tmp;
         COPY_CABAC;
-        x264_partition_i4x4_size_cabac( h, &cabac_tmp, i4, i_mode );
+        partition_i4x4_size_cabac( h, &cabac_tmp, i4, i_mode );
         i_bits = ( (uint64_t)cabac_tmp.f8_bits_encoded * i_lambda2 + 128 ) >> 8;
     }
     else
-        i_bits = (uint64_t)x264_partition_i4x4_size_cavlc( h, i4, i_mode ) * i_lambda2;
+        i_bits = (uint64_t)partition_i4x4_size_cavlc( h, i4, i_mode ) * i_lambda2;
 
     return (i_ssd<<8) + i_bits;
 }
 
-static uint64_t x264_rd_cost_chroma( x264_t *h, int i_lambda2, int i_mode, int b_dct )
+static uint64_t rd_cost_chroma( x264_t *h, int i_lambda2, int i_mode, int b_dct )
 {
     uint64_t i_ssd, i_bits;
 
@@ -352,11 +362,11 @@ static uint64_t x264_rd_cost_chroma( x264_t *h, int i_lambda2, int i_mode, int b
     {
         x264_cabac_t cabac_tmp;
         COPY_CABAC;
-        x264_chroma_size_cabac( h, &cabac_tmp );
+        chroma_size_cabac( h, &cabac_tmp );
         i_bits = ( (uint64_t)cabac_tmp.f8_bits_encoded * i_lambda2 + 128 ) >> 8;
     }
     else
-        i_bits = (uint64_t)x264_chroma_size_cavlc( h ) * i_lambda2;
+        i_bits = (uint64_t)chroma_size_cavlc( h ) * i_lambda2;
 
     return (i_ssd<<8) + i_bits;
 }
@@ -364,8 +374,8 @@ static uint64_t x264_rd_cost_chroma( x264_t *h, int i_lambda2, int i_mode, int b
  * Trellis RD quantization
  ****************************************************************************/
 
-#define TRELLIS_SCORE_MAX -1LL // negative marks the node as invalid
-#define TRELLIS_SCORE_BIAS 1LL<<60; // bias so that all valid scores are positive, even after negative contributions from psy
+#define TRELLIS_SCORE_MAX  (~0ULL) // marks the node as invalid
+#define TRELLIS_SCORE_BIAS (1ULL<<60) // bias so that all valid scores are positive, even after negative contributions from psy
 #define CABAC_SIZE_BITS 8
 #define LAMBDA_BITS 4
 
@@ -694,9 +704,13 @@ int quant_trellis_cabac( x264_t *h, dctcoef *dct,
         return !!dct[0];
     }
 
-#if HAVE_MMX && ARCH_X86_64 && !defined( __MACH__ )
+#if HAVE_MMX && ARCH_X86_64
+    uint64_t level_state0;
+    memcpy( &level_state0, cabac_state, sizeof(uint64_t) );
+    uint16_t level_state1;
+    memcpy( &level_state1, cabac_state+8, sizeof(uint16_t) );
 #define TRELLIS_ARGS unquant_mf, zigzag, lambda2, last_nnz, orig_coefs, quant_coefs, dct,\
-                     cabac_state_sig, cabac_state_last, M64(cabac_state), M16(cabac_state+8)
+                     cabac_state_sig, cabac_state_last, level_state0, level_state1
     if( num_coefs == 16 && !dc )
         if( b_chroma || !h->mb.i_psy_trellis )
             return h->quantf.trellis_cabac_4x4( TRELLIS_ARGS, b_ac );
@@ -907,8 +921,8 @@ int quant_trellis_cavlc( x264_t *h, dctcoef *dct,
                          const uint8_t *zigzag, int ctx_block_cat, int lambda2, int b_ac,
                          int b_chroma, int dc, int num_coefs, int idx, int b_8x8 )
 {
-    ALIGNED_16( dctcoef quant_coefs[2][16] );
-    ALIGNED_16( dctcoef coefs[16] ) = {0};
+    ALIGNED_ARRAY_16( dctcoef, quant_coefs,[2],[16] );
+    ALIGNED_ARRAY_16( dctcoef, coefs,[16] );
     const uint32_t *coef_weight1 = b_8x8 ? x264_dct8_weight_tab : x264_dct4_weight_tab;
     const uint32_t *coef_weight2 = b_8x8 ? x264_dct8_weight2_tab : x264_dct4_weight2_tab;
     int delta_distortion[16];
@@ -917,6 +931,9 @@ int quant_trellis_cavlc( x264_t *h, dctcoef *dct,
     const int f = 1<<15;
     int nC = b_chroma && dc ? 3 + (num_coefs>>2)
                             : ct_index[x264_mb_predict_non_zero_code( h, !b_chroma && dc ? (idx - LUMA_DC)*16 : idx )];
+
+    for( i = 0; i < 16; i += 16/sizeof(*coefs) )
+        M128( &coefs[i] ) = M128_ZERO;
 
     /* Code for handling 8x8dct -> 4x4dct CAVLC munging.  Input/output use a different
      * step/start/end than internal processing. */
@@ -997,7 +1014,7 @@ int quant_trellis_cavlc( x264_t *h, dctcoef *dct,
     if( !coef_mask )
         bs_write_vlc( &h->out.bs, x264_coeff0_token[nC] );
     else
-        x264_cavlc_block_residual_internal( h, ctx_block_cat, coefs + b_ac, nC );
+        cavlc_block_residual_internal( h, ctx_block_cat, coefs + b_ac, nC );
     score = (int64_t)h->out.bs.i_bits_encoded * lambda2;
 
     /* QNS loop: pick the change that improves RD the most, apply it, repeat.
@@ -1030,7 +1047,7 @@ int quant_trellis_cavlc( x264_t *h, dctcoef *dct,
             if( !cur_mask )
                 bs_write_vlc( &h->out.bs, x264_coeff0_token[nC] );
             else
-                x264_cavlc_block_residual_internal( h, ctx_block_cat, coefs + b_ac, nC );
+                cavlc_block_residual_internal( h, ctx_block_cat, coefs + b_ac, nC );
             cur_score += (int64_t)h->out.bs.i_bits_encoded * lambda2;
 
             coefs[i] = old_coef;
@@ -1089,8 +1106,8 @@ int x264_quant_luma_dc_trellis( x264_t *h, dctcoef *dct, int i_quant_cat, int i_
         DCT_LUMA_DC, h->mb.i_trellis_lambda2[0][b_intra], 0, 0, 1, 16, idx, 0 );
 }
 
-static const uint8_t x264_zigzag_scan2x2[4] = { 0, 1, 2, 3 };
-static const uint8_t x264_zigzag_scan2x4[8] = { 0, 2, 1, 4, 6, 3, 5, 7 };
+static const uint8_t zigzag_scan2x2[4] = { 0, 1, 2, 3 };
+static const uint8_t zigzag_scan2x4[8] = { 0, 2, 1, 4, 6, 3, 5, 7 };
 
 int x264_quant_chroma_dc_trellis( x264_t *h, dctcoef *dct, int i_qp, int b_intra, int idx )
 {
@@ -1100,12 +1117,12 @@ int x264_quant_chroma_dc_trellis( x264_t *h, dctcoef *dct, int i_qp, int b_intra
 
     if( CHROMA_FORMAT == CHROMA_422 )
     {
-        zigzag = x264_zigzag_scan2x4;
+        zigzag = zigzag_scan2x4;
         num_coefs = 8;
     }
     else
     {
-        zigzag = x264_zigzag_scan2x2;
+        zigzag = zigzag_scan2x2;
         num_coefs = 4;
     }
 

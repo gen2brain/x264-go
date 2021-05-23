@@ -1,7 +1,7 @@
 /*****************************************************************************
  * dct.h: transform and zigzag
  *****************************************************************************
- * Copyright (C) 2004-2017 x264 project
+ * Copyright (C) 2004-2021 x264 project
  *
  * Authors: Loren Merritt <lorenm@u.washington.edu>
  *
@@ -25,11 +25,6 @@
 
 #ifndef X264_DCT_H
 #define X264_DCT_H
-
-extern const uint32_t x264_dct4_weight_tab[16];
-extern const uint32_t x264_dct8_weight_tab[64];
-extern const uint32_t x264_dct4_weight2_tab[16];
-extern const uint32_t x264_dct8_weight2_tab[64];
 
 typedef struct
 {
@@ -74,7 +69,9 @@ typedef struct
 
 } x264_zigzag_function_t;
 
-void x264_dct_init( int cpu, x264_dct_function_t *dctf );
-void x264_zigzag_init( int cpu, x264_zigzag_function_t *pf_progressive, x264_zigzag_function_t *pf_interlaced );
+#define x264_dct_init x264_template(dct_init)
+void x264_dct_init( uint32_t cpu, x264_dct_function_t *dctf );
+#define x264_zigzag_init x264_template(zigzag_init)
+void x264_zigzag_init( uint32_t cpu, x264_zigzag_function_t *pf_progressive, x264_zigzag_function_t *pf_interlaced );
 
 #endif

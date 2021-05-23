@@ -1,7 +1,7 @@
 /*****************************************************************************
  * cabac.h: arithmetic coder
  *****************************************************************************
- * Copyright (C) 2003-2017 x264 project
+ * Copyright (C) 2003-2021 x264 project
  *
  * Authors: Loren Merritt <lorenm@u.washington.edu>
  *          Laurent Aimar <fenrir@via.ecp.fr>
@@ -51,36 +51,44 @@ typedef struct
     uint8_t padding[12];
 } x264_cabac_t;
 
-extern const uint8_t x264_cabac_transition[128][2];
-extern const uint16_t x264_cabac_entropy[128];
-
 /* init the contexts given i_slice_type, the quantif and the model */
+#define x264_cabac_context_init x264_template(cabac_context_init)
 void x264_cabac_context_init( x264_t *h, x264_cabac_t *cb, int i_slice_type, int i_qp, int i_model );
 
+#define x264_cabac_encode_init_core x264_template(cabac_encode_init_core)
 void x264_cabac_encode_init_core( x264_cabac_t *cb );
+#define x264_cabac_encode_init x264_template(cabac_encode_init)
 void x264_cabac_encode_init( x264_cabac_t *cb, uint8_t *p_data, uint8_t *p_end );
+#define x264_cabac_encode_decision_c x264_template(cabac_encode_decision_c)
 void x264_cabac_encode_decision_c( x264_cabac_t *cb, int i_ctx, int b );
+#define x264_cabac_encode_decision_asm x264_template(cabac_encode_decision_asm)
 void x264_cabac_encode_decision_asm( x264_cabac_t *cb, int i_ctx, int b );
+#define x264_cabac_encode_bypass_c x264_template(cabac_encode_bypass_c)
 void x264_cabac_encode_bypass_c( x264_cabac_t *cb, int b );
+#define x264_cabac_encode_bypass_asm x264_template(cabac_encode_bypass_asm)
 void x264_cabac_encode_bypass_asm( x264_cabac_t *cb, int b );
+#define x264_cabac_encode_terminal_c x264_template(cabac_encode_terminal_c)
 void x264_cabac_encode_terminal_c( x264_cabac_t *cb );
+#define x264_cabac_encode_terminal_asm x264_template(cabac_encode_terminal_asm)
 void x264_cabac_encode_terminal_asm( x264_cabac_t *cb );
+#define x264_cabac_encode_ue_bypass x264_template(cabac_encode_ue_bypass)
 void x264_cabac_encode_ue_bypass( x264_cabac_t *cb, int exp_bits, int val );
+#define x264_cabac_encode_flush x264_template(cabac_encode_flush)
 void x264_cabac_encode_flush( x264_t *h, x264_cabac_t *cb );
 
-//#if HAVE_MMX
-//#define x264_cabac_encode_decision x264_cabac_encode_decision_asm
-//#define x264_cabac_encode_bypass x264_cabac_encode_bypass_asm
-//#define x264_cabac_encode_terminal x264_cabac_encode_terminal_asm
-//#elif defined(ARCH_AARCH64)
-//#define x264_cabac_encode_decision x264_cabac_encode_decision_asm
-//#define x264_cabac_encode_bypass x264_cabac_encode_bypass_asm
-//#define x264_cabac_encode_terminal x264_cabac_encode_terminal_asm
-//#else
+#if HAVE_MMX
+#define x264_cabac_encode_decision x264_cabac_encode_decision_asm
+#define x264_cabac_encode_bypass x264_cabac_encode_bypass_asm
+#define x264_cabac_encode_terminal x264_cabac_encode_terminal_asm
+#elif HAVE_AARCH64
+#define x264_cabac_encode_decision x264_cabac_encode_decision_asm
+#define x264_cabac_encode_bypass x264_cabac_encode_bypass_asm
+#define x264_cabac_encode_terminal x264_cabac_encode_terminal_asm
+#else
 #define x264_cabac_encode_decision x264_cabac_encode_decision_c
 #define x264_cabac_encode_bypass x264_cabac_encode_bypass_c
 #define x264_cabac_encode_terminal x264_cabac_encode_terminal_c
-//#endif
+#endif
 #define x264_cabac_encode_decision_noup x264_cabac_encode_decision
 
 static ALWAYS_INLINE int x264_cabac_pos( x264_cabac_t *cb )

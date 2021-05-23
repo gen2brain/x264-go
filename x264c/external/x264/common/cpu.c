@@ -1,7 +1,7 @@
 /*****************************************************************************
  * cpu.c: cpu detection
  *****************************************************************************
- * Copyright (C) 2003-2017 x264 project
+ * Copyright (C) 2003-2021 x264 project
  *
  * Authors: Loren Merritt <lorenm@u.washington.edu>
  *          Laurent Aimar <fenrir@via.ecp.fr>
@@ -25,7 +25,7 @@
  * For more information, contact us at licensing@x264.com.
  *****************************************************************************/
 
-#include "common.h"
+#include "base.h"
 
 #if HAVE_POSIXTHREAD && SYS_LINUX
 #include <sched.h>
@@ -45,7 +45,7 @@
 
 const x264_cpu_name_t x264_cpu_names[] =
 {
-#if HAVE_MMX
+#if ARCH_X86 || ARCH_X86_64
 //  {"MMX",         X264_CPU_MMX},  // we don't support asm on mmx1 cpus anymore
 #define MMX2 X264_CPU_MMX|X264_CPU_MMX2
     {"MMX2",        MMX2},
@@ -97,7 +97,7 @@ const x264_cpu_name_t x264_cpu_names[] =
     {"", 0},
 };
 
-#if (ARCH_PPC && SYS_LINUX) || (ARCH_ARM && !HAVE_NEON)
+#if (HAVE_ALTIVEC && SYS_LINUX) || (HAVE_ARMV6 && !HAVE_NEON)
 #include <signal.h>
 #include <setjmp.h>
 static sigjmp_buf jmpbuf;
@@ -235,16 +235,8 @@ uint32_t x264_cpu_detect( void )
         int model  = ((eax>>4)&0xf) + ((eax>>12)&0xf0);
         if( family == 6 )
         {
-            /* 6/9 (pentium-m "banias"), 6/13 (pentium-m "dothan"), and 6/14 (core1 "yonah")
-             * theoretically support sse2, but it's significantly slower than mmx for
-             * almost all of x264's functions, so let's just pretend they don't. */
-            if( model == 9 || model == 13 || model == 14 )
-            {
-                cpu &= ~(X264_CPU_SSE2|X264_CPU_SSE3);
-                assert(!(cpu&(X264_CPU_SSSE3|X264_CPU_SSE4)));
-            }
             /* Detect Atom CPU */
-            else if( model == 28 )
+            if( model == 28 )
             {
                 cpu |= X264_CPU_SLOW_ATOM;
                 cpu |= X264_CPU_SLOW_PSHUFB;
@@ -296,7 +288,7 @@ uint32_t x264_cpu_detect( void )
         else if( cache == 64 )
             cpu |= X264_CPU_CACHELINE_64;
         else
-            x264_log( NULL, X264_LOG_WARNING, "unable to determine cacheline size\n" );
+            x264_log_internal( X264_LOG_WARNING, "unable to determine cacheline size\n" );
     }
 
 #if STACK_ALIGNMENT < 16
@@ -306,7 +298,7 @@ uint32_t x264_cpu_detect( void )
     return cpu;
 }
 
-#elif ARCH_PPC && HAVE_ALTIVEC
+#elif HAVE_ALTIVEC
 
 #if SYS_MACOSX || SYS_OPENBSD || SYS_FREEBSD
 #include <sys/sysctl.h>
@@ -363,15 +355,14 @@ uint32_t x264_cpu_detect( void )
 }
 #endif
 
-#elif ARCH_ARM
+#elif HAVE_ARMV6
 
 void x264_cpu_neon_test( void );
 int x264_cpu_fast_neon_mrc_test( void );
 
 uint32_t x264_cpu_detect( void )
 {
-    int flags = 0;
-#if HAVE_ARMV6
+    uint32_t flags = 0;
     flags |= X264_CPU_ARMV6;
 
     // don't do this hack if compiled with -mfpu=neon
@@ -404,26 +395,25 @@ uint32_t x264_cpu_detect( void )
     flags |= x264_cpu_fast_neon_mrc_test() ? X264_CPU_FAST_NEON_MRC : 0;
 #endif
     // TODO: write dual issue test? currently it's A8 (dual issue) vs. A9 (fast mrc)
-#endif
     return flags;
 }
 
-#elif ARCH_AARCH64
+#elif HAVE_AARCH64
 
 uint32_t x264_cpu_detect( void )
 {
+#if HAVE_NEON
     return X264_CPU_ARMV8 | X264_CPU_NEON;
+#else
+    return X264_CPU_ARMV8;
+#endif
 }
 
-#elif ARCH_MIPS
+#elif HAVE_MSA
 
 uint32_t x264_cpu_detect( void )
 {
-    uint32_t flags = 0;
-#if HAVE_MSA
-    flags |= X264_CPU_MSA;
-#endif
-    return flags;
+    return X264_CPU_MSA;
 }
 
 #else
@@ -443,7 +433,7 @@ int x264_cpu_num_processors( void )
 #elif SYS_WINDOWS
     return x264_pthread_num_processors_np();
 
-#elif SYS_CYGWIN || SYS_SunOS
+#elif SYS_CYGWIN || SYS_SunOS || SYS_OPENBSD
     return sysconf( _SC_NPROCESSORS_ONLN );
 
 #elif SYS_LINUX
@@ -459,7 +449,7 @@ int x264_cpu_num_processors( void )
     return CPU_COUNT(&p_aff);
 #else
     int np = 0;
-    for( unsigned int bit = 0; bit < 8 * sizeof(p_aff); bit++ )
+    for( size_t bit = 0; bit < 8 * sizeof(p_aff); bit++ )
         np += (((uint8_t *)&p_aff)[bit / 8] >> (bit % 8)) & 1;
     return np;
 #endif
@@ -470,15 +460,10 @@ int x264_cpu_num_processors( void )
     get_system_info( &info );
     return info.cpu_count;
 
-#elif SYS_MACOSX || SYS_FREEBSD || SYS_OPENBSD
+#elif SYS_MACOSX || SYS_FREEBSD
     int ncpu;
     size_t length = sizeof( ncpu );
-#if SYS_OPENBSD
-    int mib[2] = { CTL_HW, HW_NCPU };
-    if( sysctl(mib, 2, &ncpu, &length, NULL, 0) )
-#else
     if( sysctlbyname("hw.ncpu", &ncpu, &length, NULL, 0) )
-#endif
     {
         ncpu = 1;
     }

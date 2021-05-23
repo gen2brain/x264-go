@@ -1,7 +1,7 @@
 /*****************************************************************************
  * dct.c: transform and zigzag
  *****************************************************************************
- * Copyright (C) 2003-2017 x264 project
+ * Copyright (C) 2003-2021 x264 project
  *
  * Authors: Loren Merritt <lorenm@u.washington.edu>
  *          Laurent Aimar <fenrir@via.ecp.fr>
@@ -29,82 +29,18 @@
 #if HAVE_MMX
 #   include "x86/dct.h"
 #endif
-#if ARCH_PPC
+#if HAVE_ALTIVEC
 #   include "ppc/dct.h"
 #endif
-#if ARCH_ARM
+#if HAVE_ARMV6
 #   include "arm/dct.h"
 #endif
-#if ARCH_AARCH64
+#if HAVE_AARCH64
 #   include "aarch64/dct.h"
 #endif
-#if ARCH_MIPS
+#if HAVE_MSA
 #   include "mips/dct.h"
 #endif
-
-/* the inverse of the scaling factors introduced by 8x8 fdct */
-/* uint32 is for the asm implementation of trellis. the actual values fit in uint16. */
-#define W(i) (i==0 ? FIX8(1.0000) :\
-              i==1 ? FIX8(0.8859) :\
-              i==2 ? FIX8(1.6000) :\
-              i==3 ? FIX8(0.9415) :\
-              i==4 ? FIX8(1.2651) :\
-              i==5 ? FIX8(1.1910) :0)
-const uint32_t x264_dct8_weight_tab[64] = {
-    W(0), W(3), W(4), W(3),  W(0), W(3), W(4), W(3),
-    W(3), W(1), W(5), W(1),  W(3), W(1), W(5), W(1),
-    W(4), W(5), W(2), W(5),  W(4), W(5), W(2), W(5),
-    W(3), W(1), W(5), W(1),  W(3), W(1), W(5), W(1),
-
-    W(0), W(3), W(4), W(3),  W(0), W(3), W(4), W(3),
-    W(3), W(1), W(5), W(1),  W(3), W(1), W(5), W(1),
-    W(4), W(5), W(2), W(5),  W(4), W(5), W(2), W(5),
-    W(3), W(1), W(5), W(1),  W(3), W(1), W(5), W(1)
-};
-#undef W
-
-#define W(i) (i==0 ? FIX8(1.76777) :\
-              i==1 ? FIX8(1.11803) :\
-              i==2 ? FIX8(0.70711) :0)
-const uint32_t x264_dct4_weight_tab[16] = {
-    W(0), W(1), W(0), W(1),
-    W(1), W(2), W(1), W(2),
-    W(0), W(1), W(0), W(1),
-    W(1), W(2), W(1), W(2)
-};
-#undef W
-
-/* inverse squared */
-#define W(i) (i==0 ? FIX8(3.125) :\
-              i==1 ? FIX8(1.25) :\
-              i==2 ? FIX8(0.5) :0)
-const uint32_t x264_dct4_weight2_tab[16] = {
-    W(0), W(1), W(0), W(1),
-    W(1), W(2), W(1), W(2),
-    W(0), W(1), W(0), W(1),
-    W(1), W(2), W(1), W(2)
-};
-#undef W
-
-#define W(i) (i==0 ? FIX8(1.00000) :\
-              i==1 ? FIX8(0.78487) :\
-              i==2 ? FIX8(2.56132) :\
-              i==3 ? FIX8(0.88637) :\
-              i==4 ? FIX8(1.60040) :\
-              i==5 ? FIX8(1.41850) :0)
-const uint32_t x264_dct8_weight2_tab[64] = {
-    W(0), W(3), W(4), W(3),  W(0), W(3), W(4), W(3),
-    W(3), W(1), W(5), W(1),  W(3), W(1), W(5), W(1),
-    W(4), W(5), W(2), W(5),  W(4), W(5), W(2), W(5),
-    W(3), W(1), W(5), W(1),  W(3), W(1), W(5), W(1),
-
-    W(0), W(3), W(4), W(3),  W(0), W(3), W(4), W(3),
-    W(3), W(1), W(5), W(1),  W(3), W(1), W(5), W(1),
-    W(4), W(5), W(2), W(5),  W(4), W(5), W(2), W(5),
-    W(3), W(1), W(5), W(1),  W(3), W(1), W(5), W(1)
-};
-#undef W
-
 
 static void dct4x4dc( dctcoef d[16] )
 {
@@ -424,7 +360,6 @@ static void sub8x8_dct8( dctcoef dct[64], pixel *pix1, pixel *pix2 )
 
     pixel_sub_wxh( tmp, 8, pix1, FENC_STRIDE, pix2, FDEC_STRIDE );
 
-#undef SRC
 #define SRC(x) tmp[x*8+i]
 #define DST(x) tmp[x*8+i]
     for( int i = 0; i < 8; i++ )
@@ -502,7 +437,7 @@ static void add16x16_idct8( pixel *dst, dctcoef dct[4][64] )
     add8x8_idct8( &dst[8*FDEC_STRIDE+8], dct[3] );
 }
 
-static void inline add4x4_idct_dc( pixel *p_dst, dctcoef dc )
+static inline void add4x4_idct_dc( pixel *p_dst, dctcoef dc )
 {
     dc = (dc + 32) >> 6;
     for( int i = 0; i < 4; i++, p_dst += FDEC_STRIDE )
@@ -537,7 +472,7 @@ static void add16x16_idct_dc( pixel *p_dst, dctcoef dct[16] )
 /****************************************************************************
  * x264_dct_init:
  ****************************************************************************/
-void x264_dct_init( int cpu, x264_dct_function_t *dctf )
+void x264_dct_init( uint32_t cpu, x264_dct_function_t *dctf )
 {
     dctf->sub4x4_dct    = sub4x4_dct;
     dctf->add4x4_idct   = add4x4_idct;
@@ -732,6 +667,7 @@ void x264_dct_init( int cpu, x264_dct_function_t *dctf )
         dctf->sub16x16_dct  = x264_sub16x16_dct_altivec;
 
         dctf->add8x8_idct_dc = x264_add8x8_idct_dc_altivec;
+        dctf->add16x16_idct_dc = x264_add16x16_idct_dc_altivec;
 
         dctf->add4x4_idct   = x264_add4x4_idct_altivec;
         dctf->add8x8_idct   = x264_add8x8_idct_altivec;
@@ -746,7 +682,7 @@ void x264_dct_init( int cpu, x264_dct_function_t *dctf )
     }
 #endif
 
-#if HAVE_ARMV6 || ARCH_AARCH64
+#if HAVE_ARMV6 || HAVE_AARCH64
     if( cpu&X264_CPU_NEON )
     {
         dctf->sub4x4_dct    = x264_sub4x4_dct_neon;
@@ -965,7 +901,7 @@ static void zigzag_interleave_8x8_cavlc( dctcoef *dst, dctcoef *src, uint8_t *nn
     }
 }
 
-void x264_zigzag_init( int cpu, x264_zigzag_function_t *pf_progressive, x264_zigzag_function_t *pf_interlaced )
+void x264_zigzag_init( uint32_t cpu, x264_zigzag_function_t *pf_progressive, x264_zigzag_function_t *pf_interlaced )
 {
     pf_interlaced->scan_8x8   = zigzag_scan_8x8_field;
     pf_progressive->scan_8x8  = zigzag_scan_8x8_frame;
@@ -1060,11 +996,11 @@ void x264_zigzag_init( int cpu, x264_zigzag_function_t *pf_progressive, x264_zig
         pf_progressive->scan_8x8  = x264_zigzag_scan_8x8_frame_altivec;
     }
 #endif
-#if HAVE_ARMV6 || ARCH_AARCH64
+#if HAVE_ARMV6 || HAVE_AARCH64
     if( cpu&X264_CPU_NEON )
     {
         pf_progressive->scan_4x4  = x264_zigzag_scan_4x4_frame_neon;
-#if ARCH_AARCH64
+#if HAVE_AARCH64
         pf_interlaced->scan_4x4   = x264_zigzag_scan_4x4_field_neon;
         pf_interlaced->scan_8x8   = x264_zigzag_scan_8x8_field_neon;
         pf_interlaced->sub_4x4    = x264_zigzag_sub_4x4_field_neon;
@@ -1074,9 +1010,9 @@ void x264_zigzag_init( int cpu, x264_zigzag_function_t *pf_progressive, x264_zig
         pf_progressive->sub_4x4   = x264_zigzag_sub_4x4_frame_neon;
         pf_progressive->sub_4x4ac = x264_zigzag_sub_4x4ac_frame_neon;
         pf_progressive->sub_8x8   = x264_zigzag_sub_8x8_frame_neon;
-#endif // ARCH_AARCH64
+#endif // HAVE_AARCH64
     }
-#endif // HAVE_ARMV6 || ARCH_AARCH64
+#endif // HAVE_ARMV6 || HAVE_AARCH64
 #endif // HIGH_BIT_DEPTH
 
     pf_interlaced->interleave_8x8_cavlc =
@@ -1129,13 +1065,13 @@ void x264_zigzag_init( int cpu, x264_zigzag_function_t *pf_progressive, x264_zig
 #endif // HIGH_BIT_DEPTH
 #endif
 #if !HIGH_BIT_DEPTH
-#if ARCH_AARCH64
+#if HAVE_AARCH64
     if( cpu&X264_CPU_NEON )
     {
         pf_interlaced->interleave_8x8_cavlc =
         pf_progressive->interleave_8x8_cavlc =  x264_zigzag_interleave_8x8_cavlc_neon;
     }
-#endif // ARCH_AARCH64
+#endif // HAVE_AARCH64
 
 #if HAVE_ALTIVEC
     if( cpu&X264_CPU_ALTIVEC )

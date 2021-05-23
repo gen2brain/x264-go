@@ -1,7 +1,7 @@
 /*****************************************************************************
  * util.h: x86 inline asm
  *****************************************************************************
- * Copyright (C) 2008-2017 x264 project
+ * Copyright (C) 2008-2021 x264 project
  *
  * Authors: Fiona Glaser <fiona@x264.com>
  *          Loren Merritt <lorenm@u.washington.edu>
@@ -33,7 +33,7 @@
 #undef M128_ZERO
 #define M128_ZERO ((__m128){0,0,0,0})
 #define x264_union128_t x264_union128_sse_t
-typedef union { __m128 i; uint64_t a[2]; uint32_t b[4]; uint16_t c[8]; uint8_t d[16]; } MAY_ALIAS x264_union128_sse_t;
+typedef union { __m128 i; uint64_t q[2]; uint32_t d[4]; uint16_t w[8]; uint8_t b[16]; } MAY_ALIAS x264_union128_sse_t;
 #if HAVE_VECTOREXT
 typedef uint32_t v4si __attribute__((vector_size (16)));
 #endif
@@ -56,6 +56,7 @@ static ALWAYS_INLINE void x264_median_mv_mmx2( int16_t *dst, int16_t *a, int16_t
         "movd   %%mm0, %0    \n"
         :"=m"(*(x264_union32_t*)dst)
         :"m"(M32( a )), "m"(M32( b )), "m"(M32( c ))
+        :"mm0", "mm1", "mm2", "mm3"
     );
 }
 
@@ -90,7 +91,8 @@ static ALWAYS_INLINE int x264_predictor_difference_mmx2( int16_t (*mvc)[2], intp
         "paddd   %%mm0, %%mm4 \n"
         "movd    %%mm4, %0    \n"
         :"=r"(sum), "+r"(i_mvc)
-        :"r"(mvc), "m"(M64( mvc )), "m"(pw_1)
+        :"r"(mvc), "m"(MEM_DYN( mvc, const int16_t )), "m"(pw_1)
+        :"mm0", "mm2", "mm3", "mm4", "cc"
     );
     return sum;
 }
@@ -117,12 +119,13 @@ static ALWAYS_INLINE uint16_t x264_cabac_mvd_sum_mmx2(uint8_t *mvdleft, uint8_t 
         :"=r"(amvd)
         :"m"(M16( mvdleft )),"m"(M16( mvdtop )),
          "m"(pb_2),"m"(pb_32),"m"(pb_33)
+        :"mm0", "mm1", "mm2"
     );
     return amvd;
 }
 
 #define x264_predictor_clip x264_predictor_clip_mmx2
-static int ALWAYS_INLINE x264_predictor_clip_mmx2( int16_t (*dst)[2], int16_t (*mvc)[2], int i_mvc, int16_t mv_limit[2][2], uint32_t pmv )
+static ALWAYS_INLINE int x264_predictor_clip_mmx2( int16_t (*dst)[2], int16_t (*mvc)[2], int i_mvc, int16_t mv_limit[2][2], uint32_t pmv )
 {
     static const uint32_t pd_32 = 0x20;
     intptr_t tmp = (intptr_t)mv_limit, mvc_max = i_mvc, i = 0;
@@ -176,15 +179,16 @@ static int ALWAYS_INLINE x264_predictor_clip_mmx2( int16_t (*dst)[2], int16_t (*
         "and          $1, %k2   \n"
         "sub          %2, %4    \n" // output += !(mv == pmv || mv == 0)
         "3:                     \n"
-        :"+r"(mvc), "=m"(M64( dst )), "+r"(tmp), "+r"(mvc_max), "+r"(i)
-        :"r"(dst), "g"(pmv), "m"(pd_32), "m"(M64( mvc ))
+        :"+r"(mvc), "=m"(MEM_DYN( dst, int16_t )), "+r"(tmp), "+r"(mvc_max), "+r"(i)
+        :"r"(dst), "g"(pmv), "m"(pd_32), "m"(MEM_DYN( mvc, const int16_t ))
+        :"mm0", "mm1", "mm2", "mm3", "mm4", "mm5", "mm6", "cc"
     );
     return i;
 }
 
 /* Same as the above, except we do (mv + 2) >> 2 on the input. */
 #define x264_predictor_roundclip x264_predictor_roundclip_mmx2
-static int ALWAYS_INLINE x264_predictor_roundclip_mmx2( int16_t (*dst)[2], int16_t (*mvc)[2], int i_mvc, int16_t mv_limit[2][2], uint32_t pmv )
+static ALWAYS_INLINE int x264_predictor_roundclip_mmx2( int16_t (*dst)[2], int16_t (*mvc)[2], int i_mvc, int16_t mv_limit[2][2], uint32_t pmv )
 {
     static const uint64_t pw_2 = 0x0002000200020002ULL;
     static const uint32_t pd_32 = 0x20;
@@ -243,8 +247,9 @@ static int ALWAYS_INLINE x264_predictor_roundclip_mmx2( int16_t (*dst)[2], int16
         "and          $1, %k2   \n"
         "sub          %2, %4    \n"
         "3:                     \n"
-        :"+r"(mvc), "=m"(M64( dst )), "+r"(tmp), "+r"(mvc_max), "+r"(i)
-        :"r"(dst), "m"(pw_2), "g"(pmv), "m"(pd_32), "m"(M64( mvc ))
+        :"+r"(mvc), "=m"(MEM_DYN( dst, int16_t )), "+r"(tmp), "+r"(mvc_max), "+r"(i)
+        :"r"(dst), "m"(pw_2), "g"(pmv), "m"(pd_32), "m"(MEM_DYN( mvc, const int16_t ))
+        :"mm0", "mm1", "mm2", "mm3", "mm4", "mm5", "mm6", "mm7", "cc"
     );
     return i;
 }

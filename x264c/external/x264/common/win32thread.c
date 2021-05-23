@@ -1,7 +1,7 @@
 /*****************************************************************************
  * win32thread.c: windows threading
  *****************************************************************************
- * Copyright (C) 2010-2017 x264 project
+ * Copyright (C) 2010-2021 x264 project
  *
  * Authors: Steven Walters <kemuri9@gmail.com>
  *          Pegasys Inc. <http://www.pegasys-inc.com>
@@ -31,7 +31,7 @@
 /* Based on the agreed standing that x264 does not need to utilize >64 logical cpus,
  * this API does not detect nor utilize more than 64 cpus for systems that have them. */
 
-#include "common.h"
+#include "base.h"
 
 #if HAVE_WINRT
 /* _beginthreadex() is technically the correct option, but it's only available for Desktop applications.
@@ -51,7 +51,7 @@
 static x264_pthread_mutex_t static_mutex;
 
 /* _beginthreadex requires that the start routine is __stdcall */
-static unsigned __stdcall x264_win32thread_worker( void *arg )
+static unsigned __stdcall win32thread_worker( void *arg )
 {
     x264_pthread_t *h = arg;
     *h->p_ret = h->func( h->arg );
@@ -65,7 +65,7 @@ int x264_pthread_create( x264_pthread_t *thread, const x264_pthread_attr_t *attr
     thread->arg    = arg;
     thread->p_ret  = &thread->ret;
     thread->ret    = NULL;
-    thread->handle = (void*)_beginthreadex( NULL, 0, x264_win32thread_worker, thread, 0, NULL );
+    thread->handle = (void*)_beginthreadex( NULL, 0, win32thread_worker, thread, 0, NULL );
     return !thread->handle;
 }
 
@@ -95,7 +95,15 @@ int x264_pthread_mutex_lock( x264_pthread_mutex_t *mutex )
 {
     static const x264_pthread_mutex_t init = X264_PTHREAD_MUTEX_INITIALIZER;
     if( !memcmp( mutex, &init, sizeof(x264_pthread_mutex_t) ) )
-        *mutex = static_mutex;
+    {
+        int ret = 0;
+        EnterCriticalSection( &static_mutex );
+        if( !memcmp( mutex, &init, sizeof(x264_pthread_mutex_t) ) )
+            ret = x264_pthread_mutex_init( mutex, NULL );
+        LeaveCriticalSection( &static_mutex );
+        if( ret )
+            return ret;
+    }
     EnterCriticalSection( mutex );
     return 0;
 }

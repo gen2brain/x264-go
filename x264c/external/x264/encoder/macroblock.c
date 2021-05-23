@@ -1,7 +1,7 @@
 /*****************************************************************************
  * macroblock.c: macroblock encoding
  *****************************************************************************
- * Copyright (C) 2003-2017 x264 project
+ * Copyright (C) 2003-2021 x264 project
  *
  * Authors: Laurent Aimar <fenrir@via.ecp.fr>
  *          Loren Merritt <lorenm@u.washington.edu>
@@ -123,7 +123,7 @@ static ALWAYS_INLINE int array_non_zero( dctcoef *v, int i_count )
 /* This means that decimation can be done merely by adjusting the CBP and NNZ
  * rather than memsetting the coefficients. */
 
-static void x264_mb_encode_i16x16( x264_t *h, int p, int i_qp )
+static void mb_encode_i16x16( x264_t *h, int p, int i_qp )
 {
     pixel *p_src = h->mb.pic.p_fenc[p];
     pixel *p_dst = h->mb.pic.p_fdec[p];
@@ -242,7 +242,7 @@ static void x264_mb_encode_i16x16( x264_t *h, int p, int i_qp )
  * Unlike luma blocks, this can't be done with a lookup table or
  * other shortcut technique because of the interdependencies
  * between the coefficients due to the chroma DC transform. */
-static ALWAYS_INLINE int x264_mb_optimize_chroma_dc( x264_t *h, dctcoef *dct_dc, int dequant_mf[6][16], int i_qp, int chroma422 )
+static ALWAYS_INLINE int mb_optimize_chroma_dc( x264_t *h, dctcoef *dct_dc, int dequant_mf[6][16], int i_qp, int chroma422 )
 {
     int dmf = dequant_mf[i_qp%6][0] << i_qp/6;
 
@@ -256,7 +256,7 @@ static ALWAYS_INLINE int x264_mb_optimize_chroma_dc( x264_t *h, dctcoef *dct_dc,
         return h->quantf.optimize_chroma_2x2_dc( dct_dc, dmf );
 }
 
-static ALWAYS_INLINE void x264_mb_encode_chroma_internal( x264_t *h, int b_inter, int i_qp, int chroma422 )
+static ALWAYS_INLINE void mb_encode_chroma_internal( x264_t *h, int b_inter, int i_qp, int chroma422 )
 {
     int nz, nz_dc;
     int b_decimate = b_inter && h->mb.b_dct_decimate;
@@ -316,7 +316,7 @@ static ALWAYS_INLINE void x264_mb_encode_chroma_internal( x264_t *h, int b_inter
 
                     if( nz_dc )
                     {
-                        if( !x264_mb_optimize_chroma_dc( h, dct_dc, dequant_mf, i_qp+3*chroma422, chroma422 ) )
+                        if( !mb_optimize_chroma_dc( h, dct_dc, dequant_mf, i_qp+3*chroma422, chroma422 ) )
                             continue;
                         h->mb.cache.non_zero_count[x264_scan8[CHROMA_DC+ch]] = 1;
                         if( chroma422 )
@@ -441,7 +441,7 @@ static ALWAYS_INLINE void x264_mb_encode_chroma_internal( x264_t *h, int b_inter
 
             if( !nz_dc ) /* Whole block is empty */
                 continue;
-            if( !x264_mb_optimize_chroma_dc( h, dct_dc, dequant_mf, i_qp+3*chroma422, chroma422 ) )
+            if( !mb_optimize_chroma_dc( h, dct_dc, dequant_mf, i_qp+3*chroma422, chroma422 ) )
             {
                 h->mb.cache.non_zero_count[x264_scan8[CHROMA_DC+ch]] = 0;
                 continue;
@@ -492,12 +492,12 @@ static ALWAYS_INLINE void x264_mb_encode_chroma_internal( x264_t *h, int b_inter
 void x264_mb_encode_chroma( x264_t *h, int b_inter, int i_qp )
 {
     if( CHROMA_FORMAT == CHROMA_420 )
-        x264_mb_encode_chroma_internal( h, b_inter, i_qp, 0 );
+        mb_encode_chroma_internal( h, b_inter, i_qp, 0 );
     else
-        x264_mb_encode_chroma_internal( h, b_inter, i_qp, 1 );
+        mb_encode_chroma_internal( h, b_inter, i_qp, 1 );
 }
 
-static void x264_macroblock_encode_skip( x264_t *h )
+static void macroblock_encode_skip( x264_t *h )
 {
     M32( &h->mb.cache.non_zero_count[x264_scan8[ 0]] ) = 0;
     M32( &h->mb.cache.non_zero_count[x264_scan8[ 2]] ) = 0;
@@ -530,8 +530,8 @@ void x264_predict_lossless_chroma( x264_t *h, int i_mode )
     {
         h->mc.copy[PIXEL_8x8]( h->mb.pic.p_fdec[1], FDEC_STRIDE, h->mb.pic.p_fenc[1]-FENC_STRIDE, FENC_STRIDE, height );
         h->mc.copy[PIXEL_8x8]( h->mb.pic.p_fdec[2], FDEC_STRIDE, h->mb.pic.p_fenc[2]-FENC_STRIDE, FENC_STRIDE, height );
-        memcpy( h->mb.pic.p_fdec[1], h->mb.pic.p_fdec[1]-FDEC_STRIDE, 8*sizeof(pixel) );
-        memcpy( h->mb.pic.p_fdec[2], h->mb.pic.p_fdec[2]-FDEC_STRIDE, 8*sizeof(pixel) );
+        memcpy( h->mb.pic.p_fdec[1], h->mb.pic.p_fdec[1]-FDEC_STRIDE, 8*SIZEOF_PIXEL );
+        memcpy( h->mb.pic.p_fdec[2], h->mb.pic.p_fdec[2]-FDEC_STRIDE, 8*SIZEOF_PIXEL );
     }
     else if( i_mode == I_PRED_CHROMA_H )
     {
@@ -560,7 +560,7 @@ void x264_predict_lossless_4x4( x264_t *h, pixel *p_dst, int p, int idx, int i_m
     if( i_mode == I_PRED_4x4_V )
     {
         h->mc.copy[PIXEL_4x4]( p_dst, FDEC_STRIDE, p_src-stride, stride, 4 );
-        memcpy( p_dst, p_dst-FDEC_STRIDE, 4*sizeof(pixel) );
+        memcpy( p_dst, p_dst-FDEC_STRIDE, 4*SIZEOF_PIXEL );
     }
     else if( i_mode == I_PRED_4x4_H )
     {
@@ -580,7 +580,7 @@ void x264_predict_lossless_8x8( x264_t *h, pixel *p_dst, int p, int idx, int i_m
     if( i_mode == I_PRED_8x8_V )
     {
         h->mc.copy[PIXEL_8x8]( p_dst, FDEC_STRIDE, p_src-stride, stride, 8 );
-        memcpy( p_dst, &edge[16], 8*sizeof(pixel) );
+        memcpy( p_dst, &edge[16], 8*SIZEOF_PIXEL );
     }
     else if( i_mode == I_PRED_8x8_H )
     {
@@ -600,7 +600,7 @@ void x264_predict_lossless_16x16( x264_t *h, int p, int i_mode )
     if( i_mode == I_PRED_16x16_V )
     {
         h->mc.copy[PIXEL_16x16]( p_dst, FDEC_STRIDE, h->mb.pic.p_fenc_plane[p]-stride, stride, 16 );
-        memcpy( p_dst, p_dst-FDEC_STRIDE, 16*sizeof(pixel) );
+        memcpy( p_dst, p_dst-FDEC_STRIDE, 16*SIZEOF_PIXEL );
     }
     else if( i_mode == I_PRED_16x16_H )
     {
@@ -615,7 +615,7 @@ void x264_predict_lossless_16x16( x264_t *h, int p, int i_mode )
 /*****************************************************************************
  * x264_macroblock_encode:
  *****************************************************************************/
-static ALWAYS_INLINE void x264_macroblock_encode_internal( x264_t *h, int plane_count, int chroma )
+static ALWAYS_INLINE void macroblock_encode_internal( x264_t *h, int plane_count, int chroma )
 {
     int i_qp = h->mb.i_qp;
     int b_decimate = h->mb.b_dct_decimate;
@@ -691,7 +691,7 @@ static ALWAYS_INLINE void x264_macroblock_encode_internal( x264_t *h, int plane_
             }
         }
 
-        x264_macroblock_encode_skip( h );
+        macroblock_encode_skip( h );
         return;
     }
     if( h->mb.i_type == B_SKIP )
@@ -699,7 +699,7 @@ static ALWAYS_INLINE void x264_macroblock_encode_internal( x264_t *h, int plane_
         /* don't do bskip motion compensation if it was already done in macroblock_analyse */
         if( !h->mb.b_skip_mc )
             x264_mb_mc( h );
-        x264_macroblock_encode_skip( h );
+        macroblock_encode_skip( h );
         return;
     }
 
@@ -708,7 +708,7 @@ static ALWAYS_INLINE void x264_macroblock_encode_internal( x264_t *h, int plane_
         h->mb.b_transform_8x8 = 0;
 
         for( int p = 0; p < plane_count; p++, i_qp = h->mb.i_chroma_qp )
-            x264_mb_encode_i16x16( h, p, i_qp );
+            mb_encode_i16x16( h, p, i_qp );
     }
     else if( h->mb.i_type == I_8x8 )
     {
@@ -974,16 +974,18 @@ static ALWAYS_INLINE void x264_macroblock_encode_internal( x264_t *h, int plane_
 void x264_macroblock_encode( x264_t *h )
 {
     if( CHROMA444 )
-        x264_macroblock_encode_internal( h, 3, 0 );
+        macroblock_encode_internal( h, 3, 0 );
+    else if( CHROMA_FORMAT )
+        macroblock_encode_internal( h, 1, 1 );
     else
-        x264_macroblock_encode_internal( h, 1, 1 );
+        macroblock_encode_internal( h, 1, 0 );
 }
 
 /*****************************************************************************
  * x264_macroblock_probe_skip:
  *  Check if the current MB could be encoded as a [PB]_SKIP
  *****************************************************************************/
-static ALWAYS_INLINE int x264_macroblock_probe_skip_internal( x264_t *h, int b_bidir, int plane_count, int chroma )
+static ALWAYS_INLINE int macroblock_probe_skip_internal( x264_t *h, int b_bidir, int plane_count, int chroma )
 {
     ALIGNED_ARRAY_64( dctcoef, dct4x4,[8],[16] );
     ALIGNED_ARRAY_64( dctcoef, dctscan,[16] );
@@ -1126,12 +1128,14 @@ static ALWAYS_INLINE int x264_macroblock_probe_skip_internal( x264_t *h, int b_b
 
 int x264_macroblock_probe_skip( x264_t *h, int b_bidir )
 {
-    if( CHROMA_FORMAT == CHROMA_444 )
-        return x264_macroblock_probe_skip_internal( h, b_bidir, 3, CHROMA_444 );
+    if( CHROMA_FORMAT == CHROMA_420 )
+        return macroblock_probe_skip_internal( h, b_bidir, 1, CHROMA_420 );
     else if( CHROMA_FORMAT == CHROMA_422 )
-        return x264_macroblock_probe_skip_internal( h, b_bidir, 1, CHROMA_422 );
+        return macroblock_probe_skip_internal( h, b_bidir, 1, CHROMA_422 );
+    else if( CHROMA_FORMAT == CHROMA_444 )
+        return macroblock_probe_skip_internal( h, b_bidir, 3, CHROMA_444 );
     else
-        return x264_macroblock_probe_skip_internal( h, b_bidir, 1, CHROMA_420 );
+        return macroblock_probe_skip_internal( h, b_bidir, 1, CHROMA_400 );
 }
 
 /****************************************************************************
@@ -1172,7 +1176,7 @@ void x264_noise_reduction_update( x264_t *h )
  * RD only; 4 calls to this do not make up for one macroblock_encode.
  * doesn't transform chroma dc.
  *****************************************************************************/
-static ALWAYS_INLINE void x264_macroblock_encode_p8x8_internal( x264_t *h, int i8, int plane_count, int chroma )
+static ALWAYS_INLINE void macroblock_encode_p8x8_internal( x264_t *h, int i8, int plane_count, int chroma )
 {
     int b_decimate = h->mb.b_dct_decimate;
     int i_qp = h->mb.i_qp;
@@ -1365,18 +1369,20 @@ static ALWAYS_INLINE void x264_macroblock_encode_p8x8_internal( x264_t *h, int i
 
 void x264_macroblock_encode_p8x8( x264_t *h, int i8 )
 {
-    if( CHROMA444 )
-        x264_macroblock_encode_p8x8_internal( h, i8, 3, CHROMA_444 );
+    if( CHROMA_FORMAT == CHROMA_420 )
+        macroblock_encode_p8x8_internal( h, i8, 1, CHROMA_420 );
     else if( CHROMA_FORMAT == CHROMA_422 )
-        x264_macroblock_encode_p8x8_internal( h, i8, 1, CHROMA_422 );
+        macroblock_encode_p8x8_internal( h, i8, 1, CHROMA_422 );
+    else if( CHROMA_FORMAT == CHROMA_444 )
+        macroblock_encode_p8x8_internal( h, i8, 3, CHROMA_444 );
     else
-        x264_macroblock_encode_p8x8_internal( h, i8, 1, CHROMA_420 );
+        macroblock_encode_p8x8_internal( h, i8, 1, CHROMA_400 );
 }
 
 /*****************************************************************************
  * RD only, luma only (for 4:2:0)
  *****************************************************************************/
-static ALWAYS_INLINE void x264_macroblock_encode_p4x4_internal( x264_t *h, int i4, int plane_count )
+static ALWAYS_INLINE void macroblock_encode_p4x4_internal( x264_t *h, int i4, int plane_count )
 {
     int i_qp = h->mb.i_qp;
 
@@ -1413,7 +1419,7 @@ static ALWAYS_INLINE void x264_macroblock_encode_p4x4_internal( x264_t *h, int i
 void x264_macroblock_encode_p4x4( x264_t *h, int i8 )
 {
     if( CHROMA444 )
-        x264_macroblock_encode_p4x4_internal( h, i8, 3 );
+        macroblock_encode_p4x4_internal( h, i8, 3 );
     else
-        x264_macroblock_encode_p4x4_internal( h, i8, 1 );
+        macroblock_encode_p4x4_internal( h, i8, 1 );
 }
