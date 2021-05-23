@@ -89,7 +89,10 @@ func NewEncoder(w io.Writer, opts *Options) (e *Encoder, err error) {
 	param.IHeight = int32(e.opts.Height)
 	param.ICsp = e.csp
 	param.ILogLevel = e.opts.LogLevel
-	param.IBitdepth = 8
+
+	if x264c.Build >= 153 {
+		param.IBitdepth = 8
+	}
 
 	param.BVfrInput = 0
 	param.BRepeatHeaders = 1
