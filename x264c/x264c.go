@@ -118,47 +118,47 @@ const (
 	KeyintMaxInfinite    = (1 << 30)
 
 	// Colorspace type.
-	CspMask = 0x00ff
+	CspMask = C.X264_CSP_MASK
 	// Invalid mode.
-	CspNone = 0x0000
+	CspNone = C.X264_CSP_NONE
 	// Yuv 4:0:0 planar.
-	CspI400 = 0x0001
+	CspI400 = C.X264_CSP_I400
 	// Yuv 4:2:0 planar.
-	CspI420 = 0x0002
+	CspI420 = C.X264_CSP_I420
 	// Yvu 4:2:0 planar.
-	CspYv12 = 0x0003
+	CspYv12 = C.X264_CSP_YV12
 	// Yuv 4:2:0, with one y plane and one packed u+v.
-	CspNv12 = 0x0004
+	CspNv12 = C.X264_CSP_NV12
 	// Yuv 4:2:0, with one y plane and one packed v+u.
-	CspNv21 = 0x0005
+	CspNv21 = C.X264_CSP_NV21
 	// Yuv 4:2:2 planar.
-	CspI422 = 0x0006
+	CspI422 = C.X264_CSP_I422
 	// Yvu 4:2:2 planar.
-	CspYv16 = 0x0007
+	CspYv16 = C.X264_CSP_YV16
 	// Yuv 4:2:2, with one y plane and one packed u+v.
-	CspNv16 = 0x0008
+	CspNv16 = C.X264_CSP_NV16
 	// Yuyv 4:2:2 packed.
-	CspYuyv = 0x0009
+	CspYuyv = C.X264_CSP_YUYV
 	// Uyvy 4:2:2 packed.
-	CspUyvy = 0x000a
+	CspUyvy = C.X264_CSP_UYVY
 	// 10-bit yuv 4:2:2 packed in 32.
-	CspV210 = 0x000b
+	CspV210 = C.X264_CSP_V210
 	// Yuv 4:4:4 planar.
-	CspI444 = 0x000c
+	CspI444 = C.X264_CSP_I444
 	// Yvu 4:4:4 planar.
-	CspYv24 = 0x000d
+	CspYv24 = C.X264_CSP_YV24
 	// Packed bgr 24bits.
-	CspBgr = 0x000e
+	CspBgr = C.X264_CSP_BGR
 	// Packed bgr 32bits.
-	CspBgra = 0x000f
+	CspBgra = C.X264_CSP_BGRA
 	// Packed rgb 24bits.
-	CspRgb = 0x0010
+	CspRgb = C.X264_CSP_RGB
 	// End of list.
-	CspMax = 0x0011
+	CspMax = C.X264_CSP_MAX
 	// The csp is vertically flipped.
-	CspVflip = 0x1000
+	CspVflip = C.X264_CSP_VFLIP
 	// The csp has a depth of 16 bits per pixel component.
-	CspHighDepth = 0x2000
+	CspHighDepth = C.X264_CSP_HIGH_DEPTH
 
 	// Slice type.
 	// Let x264 choose the right type.
@@ -470,188 +470,6 @@ type Level struct {
 	Direct8x8 byte
 	// Forbid interlacing.
 	FrameOnly byte
-}
-
-// Param type.
-type Param struct {
-	// CPU flags.
-	Cpu uint32
-	// Encode multiple frames in parallel.
-	IThreads int32
-	// Multiple threads for lookahead analysis.
-	ILookaheadThreads int32
-	// Whether to use slice-based threading.
-	BSlicedThreads int32
-	// Whether to allow non-deterministic optimizations when threaded.
-	BDeterministic int32
-	// Force canonical behavior rather than cpu-dependent optimal algorithms.
-	BCpuIndependent int32
-	// Threaded lookahead buffer.
-	ISyncLookahead int32
-
-	// Video Properties.
-	IWidth  int32
-	IHeight int32
-	// CSP of encoded bitstream.
-	ICsp      int32
-	IBitdepth int32
-	ILevelIdc int32
-	// Number of frames to encode if known, else 0.
-	IFrameTotal int32
-
-	// NAL HRD.
-	// Uses Buffering and Picture Timing SEIs to signal HRD. The HRD in H.264 was not designed with VFR in mind.
-	// It is therefore not recommendeded to use NAL HRD with VFR.
-	// Furthermore, reconfiguring the VBV (via x264_encoder_reconfig) will currently generate invalid HRD.
-	INalHrd int32
-
-	Vui Vui
-
-	// Bitstream parameters.
-	// Maximum number of reference frames.
-	IFrameReference int32
-	// Force a DPB size larger than that implied by B-frames and reference frames.
-	// Useful in combination with interactive error resilience.
-	IDpbSize int32
-	// Force an IDR keyframe at this interval.
-	IKeyintMax int32
-	// Scenecuts closer together than this are coded as I, not IDR.
-	IKeyintMin int32
-	// How aggressively to insert extra I frames.
-	IScenecutThreshold int32
-	// Whether or not to use periodic intra refresh instead of IDR frames.
-	BIntraRefresh int32
-
-	// How many b-frame between 2 references pictures.
-	IBframe         int32
-	IBframeAdaptive int32
-	IBframeBias     int32
-	// Keep some B-frames as references: 0=off, 1=strict hierarchical, 2=normal.
-	IBframePyramid int32
-	BOpenGop       int32
-	BBlurayCompat  int32
-	IAvcintraClass int32
-
-	BDeblockingFilter int32
-	// [-6, 6] -6 light filter, 6 strong.
-	IDeblockingFilterAlphac0 int32
-	// [-6, 6]  idem.
-	IDeblockingFilterBeta int32
-
-	BCabac        int32
-	ICabacInitIdc int32
-
-	BInterlaced       int32
-	BConstrainedIntra int32
-
-	ICqmPreset int32
-	_          [4]byte
-	// Filename (in UTF-8) of CQM file, JM format.
-	PszCqmFile *int8
-
-	// Used only if i_cqm_preset == X264_CQM_CUSTOM.
-	Cqm4iy [16]byte
-	Cqm4py [16]byte
-	Cqm4ic [16]byte
-	Cqm4pc [16]byte
-	Cqm8iy [64]byte
-	Cqm8py [64]byte
-	Cqm8ic [64]byte
-	Cqm8pc [64]byte
-
-	// Log.
-	PfLog       *[0]byte
-	PLogPrivate unsafe.Pointer
-	ILogLevel   int32
-	// Fully reconstruct frames, even when not necessary for encoding. Implied by psz_dump_yuv.
-	BFullRecon int32
-	// Filename (in UTF-8) for reconstructed frames.
-	PszDumpYuv *int8
-
-	// Encoder analyser parameters.
-	Analyse Analyse
-
-	_ [4]byte
-
-	// Rate control parameters.
-	Rc Rc
-
-	// Cropping Rectangle parameters: added to those implicitly defined by non-mod16 video resolutions.
-	CropRect CropRect
-
-	// Frame packing arrangement flag.
-	IFramePacking int32
-
-	// Muxing parameters.
-	// Generate access unit delimiters.
-	BAud int32
-	// Put SPS/PPS before each keyframe.
-	BRepeatHeaders int32
-	// If set, place start codes (4 bytes) before NAL units, otherwise place size (4 bytes) before NAL units.
-	BAnnexb int32
-	// SPS and PPS id number.
-	ISpsId int32
-	// VFR input. If 1, use timebase and timestamps for ratecontrol purposes. If 0, use fps only.
-	BVfrInput int32
-	// Use explicitly set timebase for CFR.
-	BPulldown int32
-	IFpsNum   uint32
-	IFpsDen   uint32
-	// Timebase numerator.
-	ITimebaseNum uint32
-	// Timebase denominator.
-	ITimebaseDen uint32
-
-	BTff int32
-
-	// The correct pic_struct must be passed with each input frame.
-	// The input timebase should be the timebase corresponding to the output framerate. This should be constant.
-	// e.g. for 3:2 pulldown timebase should be 1001/30000.
-	// The PTS passed with each frame must be the PTS of the frame after pulldown is applied.
-	// Frame doubling and tripling require BVfrInput set to zero (see H.264 Table D-1)
-	//
-	// Pulldown changes are not clearly defined in H.264. Therefore, it is the calling app's responsibility to manage this.
-	BPicStruct int32
-
-	// Used only when b_interlaced=0. Setting this flag makes it possible to flag the stream as PAFF interlaced yet
-	// encode all frames progessively. It is useful for encoding 25p and 30p Blu-Ray streams.
-	BFakeInterlaced int32
-
-	// Don't optimize header parameters based on video content, e.g. ensure that splitting an input video, compressing
-	// each part, and stitching them back together will result in identical SPS/PPS. This is necessary for stitching
-	// with container formats that don't allow multiple SPS/PPS.
-	BStitchable int32
-
-	// Use OpenCL when available.
-	BOpencl int32
-	// Specify count of GPU devices to skip, for CLI users.
-	IOpenclDevice int32
-	_             [4]byte
-	// Pass explicit cl_device_id as void*, for API users.
-	OpenclDeviceId unsafe.Pointer
-	// Filename (in UTF-8) of the compiled OpenCL kernel cache file.
-	PszClbinFile *int8
-
-	// Slicing parameters
-	// Max size per slice in bytes; includes estimated NAL overhead.
-	ISliceMaxSize int32
-	// Max number of MBs per slice; overrides i_slice_count.
-	ISliceMaxMbs int32
-	// Min number of MBs per slice.
-	ISliceMinMbs int32
-	// Number of slices per frame: forces rectangular slices.
-	ISliceCount int32
-	// Absolute cap on slices per frame; stops applying slice-max-size and slice-max-mbs if this is reached.
-	ISliceCountMax int32
-
-	_           [4]byte
-	ParamFree   *[0]byte
-	NaluProcess *[0]byte
-}
-
-// cptr return C pointer.
-func (p *Param) cptr() *C.x264_param_t {
-	return (*C.x264_param_t)(unsafe.Pointer(p))
 }
 
 // Hrd type.

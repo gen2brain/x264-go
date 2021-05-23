@@ -3,7 +3,7 @@ language: go
 go:
   - 1.16.x
 
-gobuild_args: "-tags extlib"
+gobuild_args: "-tags 'extlib compat'"
 
 before_install:
    - sudo apt-get install libx264-dev
