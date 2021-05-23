@@ -184,6 +184,8 @@ type Param struct {
 	_           [4]byte
 	ParamFree   *[0]byte
 	NaluProcess *[0]byte
+
+	IBitdepth int32
 }
 
 // cptr return C pointer.
