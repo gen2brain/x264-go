@@ -122,7 +122,7 @@ const (
 	// Invalid mode.
 	CspNone = C.X264_CSP_NONE
 	// Yuv 4:0:0 planar.
-	CspI400 = C.X264_CSP_I400
+	CspI400 = 0x0001
 	// Yuv 4:2:0 planar.
 	CspI420 = C.X264_CSP_I420
 	// Yvu 4:2:0 planar.
@@ -138,9 +138,9 @@ const (
 	// Yuv 4:2:2, with one y plane and one packed u+v.
 	CspNv16 = C.X264_CSP_NV16
 	// Yuyv 4:2:2 packed.
-	CspYuyv = C.X264_CSP_YUYV
+	CspYuyv = 0x0009
 	// Uyvy 4:2:2 packed.
-	CspUyvy = C.X264_CSP_UYVY
+	CspUyvy = 0x000a
 	// 10-bit yuv 4:2:2 packed in 32.
 	CspV210 = C.X264_CSP_V210
 	// Yuv 4:4:4 planar.
