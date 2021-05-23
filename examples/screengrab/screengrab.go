@@ -42,7 +42,7 @@ func main() {
 	s := make(chan os.Signal, 1)
 	signal.Notify(s, os.Interrupt, syscall.SIGTERM)
 
-	ticker := time.NewTicker(time.Second / time.Duration(60))
+	ticker := time.NewTicker(time.Second / time.Duration(30))
 
 	start := time.Now()
 	frame := 0
