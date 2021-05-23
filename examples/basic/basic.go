@@ -15,7 +15,7 @@ func main() {
 		Height:    480,
 		FrameRate: 25,
 		Preset:    "veryfast",
-		Tune:      "zerolatency",
+		Tune:      "stillimage",
 		Profile:   "baseline",
 		LogLevel:  x264.LogDebug,
 	}
@@ -49,6 +49,12 @@ func main() {
 	}
 
 	err = enc.Encode(img)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+
+	err = enc.Flush()
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)

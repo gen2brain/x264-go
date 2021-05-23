@@ -1,6 +1,9 @@
 // Package x264 provides H.264/MPEG-4 AVC codec encoder based on [x264](https://www.videolan.org/developers/x264.html) library.
 package x264
 
+/*
+#include <stdlib.h>
+*/
 import "C"
 
 import (
@@ -53,6 +56,8 @@ type Encoder struct {
 	nals  []*x264c.Nal
 
 	picIn x264c.Picture
+
+	tpf int64
 }
 
 // NewEncoder returns new x264 encoder.
@@ -82,21 +87,18 @@ func NewEncoder(w io.Writer, opts *Options) (e *Encoder, err error) {
 
 	param.IWidth = int32(e.opts.Width)
 	param.IHeight = int32(e.opts.Height)
-
 	param.ICsp = e.csp
+	param.IBitdepth = 8
+	param.ILogLevel = e.opts.LogLevel
+
 	param.BVfrInput = 0
 	param.BRepeatHeaders = 1
 	param.BAnnexb = 1
 
-	param.ILogLevel = e.opts.LogLevel
-
-	if e.opts.FrameRate > 0 {
-		param.IFpsNum = uint32(e.opts.FrameRate)
-		param.IFpsDen = 1
-
-		param.IKeyintMax = int32(e.opts.FrameRate)
-		param.BIntraRefresh = 1
-	}
+	param.BIntraRefresh = 1
+	param.IKeyintMax = int32(e.opts.FrameRate)
+	param.IFpsNum = uint32(e.opts.FrameRate)
+	param.IFpsDen = 1
 
 	if e.opts.Profile != "" {
 		ret := x264c.ParamApplyProfile(&param, e.opts.Profile)
@@ -106,20 +108,9 @@ func NewEncoder(w io.Writer, opts *Options) (e *Encoder, err error) {
 		}
 	}
 
-	// Allocate on create instead while encoding
 	var picIn x264c.Picture
-	ret := x264c.PictureAlloc(&picIn, e.csp, int32(e.opts.Width), int32(e.opts.Height))
-	if ret < 0 {
-		err = fmt.Errorf("x264: cannot allocate picture")
-		return
-	}
+	x264c.PictureInit(&picIn)
 	e.picIn = picIn
-	defer func() {
-		// Cleanup if intialization fail
-		if err != nil {
-			x264c.PictureClean(&picIn)
-		}
-	}()
 
 	e.e = x264c.EncoderOpen(&param)
 	if e.e == nil {
@@ -127,7 +118,7 @@ func NewEncoder(w io.Writer, opts *Options) (e *Encoder, err error) {
 		return
 	}
 
-	ret = x264c.EncoderHeaders(e.e, e.nals, &e.nnals)
+	ret := x264c.EncoderHeaders(e.e, e.nals, &e.nnals)
 	if ret < 0 {
 		err = fmt.Errorf("x264: cannot encode headers")
 		return
@@ -156,9 +147,26 @@ func (e *Encoder) Encode(im image.Image) (err error) {
 	e.img.ToYCbCr(im)
 
 	picIn := e.picIn
-	e.img.CopyToCPointer(picIn.Img.Plane[0], picIn.Img.Plane[1], picIn.Img.Plane[2])
+
+	picIn.Img.ICsp = e.csp
+
+	picIn.Img.IPlane = 3
+	picIn.Img.IStride[0] = int32(e.opts.Width)
+	picIn.Img.IStride[1] = int32(e.opts.Width) / 2
+	picIn.Img.IStride[2] = int32(e.opts.Width) / 2
+
+	picIn.Img.Plane[0] = C.CBytes(e.img.Y)
+	picIn.Img.Plane[1] = C.CBytes(e.img.Cb)
+	picIn.Img.Plane[2] = C.CBytes(e.img.Cr)
+
 	picIn.IPts = e.pts
 	e.pts++
+
+	defer func() {
+		picIn.FreePlane(0)
+		picIn.FreePlane(1)
+		picIn.FreePlane(2)
+	}()
 
 	ret := x264c.EncoderEncode(e.e, e.nals, &e.nnals, &picIn, &picOut)
 	if ret < 0 {

@@ -1,33 +1,37 @@
 package main
 
 import (
-	"bytes"
 	"fmt"
-	"io/ioutil"
+	"log"
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/gen2brain/x264-go"
 	"github.com/kbinani/screenshot"
 )
 
 func main() {
-	buf := bytes.NewBuffer(make([]byte, 0))
+	file, err := os.Create("screen.264")
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "%s\n", err.Error())
+		os.Exit(1)
+	}
 
 	bounds := screenshot.GetDisplayBounds(0)
 
 	opts := &x264.Options{
 		Width:     bounds.Dx(),
 		Height:    bounds.Dy(),
-		FrameRate: 10,
+		FrameRate: 30,
 		Tune:      "zerolatency",
-		Preset:    "veryfast",
+		Preset:    "ultrafast",
 		Profile:   "baseline",
-		LogLevel:  x264.LogDebug,
+		LogLevel:  x264.LogError,
 	}
 
-	enc, err := x264.NewEncoder(buf, opts)
+	enc, err := x264.NewEncoder(file, opts)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%s\n", err.Error())
 		os.Exit(1)
@@ -38,12 +42,17 @@ func main() {
 	s := make(chan os.Signal, 1)
 	signal.Notify(s, os.Interrupt, syscall.SIGTERM)
 
-	for {
+	ticker := time.NewTicker(time.Second / time.Duration(60))
+
+	start := time.Now()
+	frame := 0
+
+	for range ticker.C {
 		select {
 		case <-s:
 			enc.Flush()
 
-			err = ioutil.WriteFile("screen.264", buf.Bytes(), 0644)
+			err = file.Close()
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "%s\n", err.Error())
 				os.Exit(1)
@@ -51,6 +60,8 @@ func main() {
 
 			os.Exit(0)
 		default:
+			frame++
+			log.Printf("frame: %v", frame)
 			img, err := screenshot.CaptureRect(bounds)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "%s\n", err.Error())
@@ -61,6 +72,8 @@ func main() {
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "%s\n", err.Error())
 			}
+			log.Printf("t: %v", time.Since(start))
+			start = time.Now()
 		}
 	}
 }
