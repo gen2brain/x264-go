@@ -88,20 +88,17 @@ func NewEncoder(w io.Writer, opts *Options) (e *Encoder, err error) {
 	param.IWidth = int32(e.opts.Width)
 	param.IHeight = int32(e.opts.Height)
 	param.ICsp = e.csp
+	param.ILogLevel = e.opts.LogLevel
+	param.IBitdepth = 8
 
-	if x264c.Build >= 153 {
-		param.ILogLevel = e.opts.LogLevel
-		param.IBitdepth = 8
+	param.BVfrInput = 0
+	param.BRepeatHeaders = 1
+	param.BAnnexb = 1
 
-		param.BVfrInput = 0
-		param.BRepeatHeaders = 1
-		param.BAnnexb = 1
-
-		param.BIntraRefresh = 1
-		param.IKeyintMax = int32(e.opts.FrameRate)
-		param.IFpsNum = uint32(e.opts.FrameRate)
-		param.IFpsDen = 1
-	}
+	param.BIntraRefresh = 1
+	param.IKeyintMax = int32(e.opts.FrameRate)
+	param.IFpsNum = uint32(e.opts.FrameRate)
+	param.IFpsDen = 1
 
 	if e.opts.Profile != "" {
 		ret := x264c.ParamApplyProfile(&param, e.opts.Profile)
