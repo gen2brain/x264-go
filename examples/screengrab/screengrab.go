@@ -24,7 +24,7 @@ func main() {
 	opts := &x264.Options{
 		Width:     bounds.Dx(),
 		Height:    bounds.Dy(),
-		FrameRate: 30,
+		FrameRate: 25,
 		Tune:      "zerolatency",
 		Preset:    "ultrafast",
 		Profile:   "baseline",
@@ -42,7 +42,7 @@ func main() {
 	s := make(chan os.Signal, 1)
 	signal.Notify(s, os.Interrupt, syscall.SIGTERM)
 
-	ticker := time.NewTicker(time.Second / time.Duration(30))
+	ticker := time.NewTicker(time.Second / time.Duration(25))
 
 	start := time.Now()
 	frame := 0
