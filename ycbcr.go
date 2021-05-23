@@ -4,6 +4,8 @@ import (
 	"image"
 	"image/color"
 	"image/draw"
+
+	"github.com/gen2brain/x264-go/yuv"
 )
 
 // YCbCr is an in-memory image of Y'CbCr colors.
@@ -40,8 +42,8 @@ func (p *YCbCr) ToYCbCrDraw(src image.Image) {
 	draw.Draw(p, bounds, src, bounds.Min, draw.Src)
 }
 
-// ToYCbCr converts image.Image to YCbCr.
-func (p *YCbCr) ToYCbCr(src image.Image) {
+// ToYCbCrColor converts image.Image to YCbCr.
+func (p *YCbCr) ToYCbCrColor(src image.Image) {
 	bounds := src.Bounds()
 
 	for row := 0; row < bounds.Max.Y; row++ {
@@ -54,4 +56,21 @@ func (p *YCbCr) ToYCbCr(src image.Image) {
 			p.Cr[p.COffset(col, row)] = cr
 		}
 	}
+}
+
+// ToYCbCr converts image.Image to YCbCr.
+func (p *YCbCr) ToYCbCr(src image.Image) {
+	bounds := src.Bounds()
+	width := bounds.Dx()
+	height := bounds.Dy()
+
+	lumaSize := int32(width * height)
+	chromaSize := int32(width*height) / 4
+
+	yuvProc := yuv.NewYuvImgProcessor(width, height)
+	yCbCr := yuvProc.Process(src.(*image.RGBA)).Get()
+
+	p.Y = yCbCr[:lumaSize]
+	p.Cb = yCbCr[lumaSize : lumaSize+chromaSize]
+	p.Cr = yCbCr[lumaSize+chromaSize:]
 }

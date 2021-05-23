@@ -144,8 +144,8 @@ func NewEncoder(w io.Writer, opts *Options) (e *Encoder, err error) {
 func (e *Encoder) Encode(im image.Image) (err error) {
 	var picOut x264c.Picture
 
-	_, ok := im.(*image.RGBA)
-	if ok {
+	_, rgba := im.(*image.RGBA)
+	if rgba {
 		e.img.ToYCbCr(im)
 	} else {
 		e.img.ToYCbCrDraw(im)
