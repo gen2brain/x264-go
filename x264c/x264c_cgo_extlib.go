@@ -1,4 +1,4 @@
-// +build extlib
+// +build extlib,!pkgconfig
 
 package x264c
 

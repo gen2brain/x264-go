@@ -12,6 +12,13 @@ C source code is included in package. If you want to use external shared/static 
 
     go get -u github.com/gen2brain/x264-go
 
+### Build tags
+
+* `extlib` - use external x264 library
+* `compat` - enable compat mode (for old versions, used with extlib)
+* `pkgconfig` - enable pkg-config (used with extlib)
+
+
 ### Examples
 
 See [screengrab](https://github.com/gen2brain/x264-go/blob/master/examples/screengrab/screengrab.go) example.
