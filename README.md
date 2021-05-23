@@ -6,7 +6,7 @@
 
 `x264-go` provides H.264/MPEG-4 AVC codec encoder based on [x264](https://www.videolan.org/developers/x264.html) library.
 
-C source code is included in package. If you want to use external shared/static library (i.e. built with asm and/or OpenCL) use `-tags extlib` (>= v0.153.x).
+C source code is included in package. If you want to use external shared/static library (i.e. built with asm and/or OpenCL) use `-tags extlib`
 
 ### Installation
 
@@ -15,7 +15,7 @@ C source code is included in package. If you want to use external shared/static 
 ### Build tags
 
 * `extlib` - use external x264 library
-* `compat` - enable compat mode (for old versions, used with extlib)
+* `compat` - enable compat mode (for versions < 0.153.x, used with extlib)
 * `pkgconfig` - enable pkg-config (used with extlib)
 
 
