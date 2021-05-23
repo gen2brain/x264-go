@@ -3,40 +3,6 @@
 package x264c
 
 /*
-#include "external/x264/common/mc.c"
-#include "external/x264/common/predict.c"
-#include "external/x264/common/pixel.c"
-#include "external/x264/common/macroblock.c"
-#include "external/x264/common/frame.c"
-#include "external/x264/common/dct.c"
-#include "external/x264/common/cpu.c"
-#include "external/x264/common/cabac.c"
-#include "external/x264/common/common.c"
-#include "external/x264/common/osdep.c"
-#include "external/x264/common/rectangle.c"
-#include "external/x264/common/set.c"
-#include "external/x264/common/quant.c"
-#include "external/x264/common/deblock.c"
-#include "external/x264/common/vlc.c"
-#include "external/x264/common/mvpred.c"
-#include "external/x264/common/bitstream.c"
-
-//#include "external/x264/encoder/analyse.c"
-#include "external/x264/encoder/me.c"
-#include "external/x264/encoder/ratecontrol.c"
-#include "external/x264/encoder/set.c"
-#include "external/x264/encoder/macroblock.c"
-#include "external/x264/encoder/cabac.c"
-#include "external/x264/encoder/cavlc.c"
-#include "external/x264/encoder/encoder.c"
-#include "external/x264/encoder/lookahead.c"
-
-#include "external/x264/common/threadpool.c"
-
-#ifdef HAVE_WIN32THREAD
-#include "external/x264/common/win32thread.c"
-#endif
-
 #cgo android LDFLAGS: -lm
 #cgo windows LDFLAGS:
 #cgo linux,!android LDFLAGS: -lpthread -lm
@@ -54,8 +20,8 @@ package x264c
 
 #cgo CFLAGS: -std=gnu99 -Iexternal/x264 -D_GNU_SOURCE -fomit-frame-pointer -Wshadow -O3
 #cgo CFLAGS: -DHAVE_THREAD=1 -DHAVE_LOG2F=1 -DHAVE_STRTOK_R=1 -DHAVE_MMAP=1 -DHAVE_GPL=1 -DHAVE_INTERLACED=1
-#cgo CFLAGS: -DHAVE_SWSCALE=0 -DHAVE_LAVF=0 -DHAVE_AVS=0 -DUSE_AVXSYNTH=0 -DHAVE_VECTOREXT=1 -DHAVE_BITDEPTH8=1 -DHIGH_BIT_DEPTH=0
-#cgo CFLAGS: -DHAVE_OPENCL=0 -DHAVE_ALTIVEC=0 -DHAVE_ALTIVEC_H=0 -DHAVE_FFMS=0 -DHAVE_GPAC=0 -DHAVE_LSMASH=0
-#cgo CFLAGS: -DX264_BIT_DEPTH=8 -DX264_GPL=11 -DX264_INTERLACED=1 -DX264_CHROMA_FORMAT=0
+#cgo CFLAGS: -DHAVE_SWSCALE=0 -DHAVE_LAVF=0 -DHAVE_AVS=0 -DUSE_AVXSYNTH=0 -DHAVE_VECTOREXT=1 -DHAVE_BITDEPTH8=1 -DHAVE_BITDEPTH10=0
+#cgo CFLAGS: -DHIGH_BIT_DEPTH=0 -DHAVE_OPENCL=0 -DHAVE_ALTIVEC=0 -DHAVE_ALTIVEC_H=0 -DHAVE_FFMS=0 -DHAVE_GPAC=0 -DHAVE_LSMASH=0
+#cgo CFLAGS: -DBIT_DEPTH=8 -DX264_BIT_DEPTH=8 -DX264_GPL=1 -DX264_INTERLACED=1 -DX264_CHROMA_FORMAT=0
 */
 import "C"

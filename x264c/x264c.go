@@ -12,6 +12,8 @@ import "unsafe"
 
 // Constants.
 const (
+	Build = C.X264_BUILD
+
 	// CPU flags.
 	CpuMmx = (1 << 0)
 	// MMX2 aka MMXEXT aka ISSE.
@@ -119,38 +121,40 @@ const (
 	CspMask = 0x00ff
 	// Invalid mode.
 	CspNone = 0x0000
+	// Yuv 4:0:0 planar.
+	CspI400 = 0x0001
 	// Yuv 4:2:0 planar.
-	CspI420 = 0x0001
+	CspI420 = 0x0002
 	// Yvu 4:2:0 planar.
-	CspYv12 = 0x0002
+	CspYv12 = 0x0003
 	// Yuv 4:2:0, with one y plane and one packed u+v.
-	CspNv12 = 0x0003
+	CspNv12 = 0x0004
 	// Yuv 4:2:0, with one y plane and one packed v+u.
-	CspNv21 = 0x0004
+	CspNv21 = 0x0005
 	// Yuv 4:2:2 planar.
-	CspI422 = 0x0005
+	CspI422 = 0x0006
 	// Yvu 4:2:2 planar.
-	CspYv16 = 0x0006
+	CspYv16 = 0x0007
 	// Yuv 4:2:2, with one y plane and one packed u+v.
-	CspNv16 = 0x0007
+	CspNv16 = 0x0008
 	// Yuyv 4:2:2 packed.
-	CspYuyv = 0x0008
+	CspYuyv = 0x0009
 	// Uyvy 4:2:2 packed.
-	CspUyvy = 0x0009
+	CspUyvy = 0x000a
 	// 10-bit yuv 4:2:2 packed in 32.
-	CspV210 = 0x000a
+	CspV210 = 0x000b
 	// Yuv 4:4:4 planar.
-	CspI444 = 0x000b
+	CspI444 = 0x000c
 	// Yvu 4:4:4 planar.
-	CspYv24 = 0x000c
+	CspYv24 = 0x000d
 	// Packed bgr 24bits.
-	CspBgr = 0x000d
+	CspBgr = 0x000e
 	// Packed bgr 32bits.
-	CspBgra = 0x000e
+	CspBgra = 0x000f
 	// Packed rgb 24bits.
-	CspRgb = 0x000f
+	CspRgb = 0x0010
 	// End of list.
-	CspMax = 0x0010
+	CspMax = 0x0011
 	// The csp is vertically flipped.
 	CspVflip = 0x1000
 	// The csp has a depth of 16 bits per pixel component.
@@ -186,8 +190,9 @@ const (
 	NalHrdVbr  = 1
 	NalHrdCbr  = 2
 
-	ParamBadName  = (-1)
-	ParamBadValue = (-2)
+	ParamBadName     = (-1)
+	ParamBadValue    = (-2)
+	ParamAllocFailed = (-3)
 
 	// MbinfoConstant.
 	MbinfoConstant = (1 << 0)
@@ -489,6 +494,7 @@ type Param struct {
 	IHeight int32
 	// CSP of encoded bitstream.
 	ICsp      int32
+	IBitdepth int32
 	ILevelIdc int32
 	// Number of frames to encode if known, else 0.
 	IFrameTotal int32
@@ -746,6 +752,11 @@ type Picture struct {
 // cptr return C pointer.
 func (p *Picture) cptr() *C.x264_picture_t {
 	return (*C.x264_picture_t)(unsafe.Pointer(p))
+}
+
+// freePlane .
+func (p *Picture) FreePlane(n int) {
+	C.free(p.Img.Plane[n])
 }
 
 // NalEncode - encode Nal.
