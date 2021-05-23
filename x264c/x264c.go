@@ -572,7 +572,7 @@ func (p *Picture) cptr() *C.x264_picture_t {
 	return (*C.x264_picture_t)(unsafe.Pointer(p))
 }
 
-// freePlane .
+// FreePlane - frees plane.
 func (p *Picture) FreePlane(n int) {
 	C.free(p.Img.Plane[n])
 }
