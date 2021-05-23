@@ -1,10 +1,5 @@
 package x264
 
-// #include <string.h>
-import "C"
-
-import "unsafe"
-
 import (
 	"image"
 	"image/color"
@@ -39,15 +34,24 @@ func (p *YCbCr) setYCbCr(x, y int, c color.YCbCr) {
 	p.Cr[ci] = c.Cr
 }
 
-// ToYCbCr converts image.Image to YCbCr.
-func (p *YCbCr) ToYCbCr(src image.Image) {
+// ToYCbCrDraw converts image.Image to YCbCr.
+func (p *YCbCr) ToYCbCrDraw(src image.Image) {
 	bounds := src.Bounds()
 	draw.Draw(p, bounds, src, bounds.Min, draw.Src)
 }
 
-// Copy arbitary YCbCr to buffer that allocated by x264_picture_alloc()
-func (p *YCbCr) CopyToCPointer(CY, CCb, CCr unsafe.Pointer) {
-	C.memcpy(CY, unsafe.Pointer(&p.Y[0]), C.size_t(uint(len(p.Y))))
-	C.memcpy(CCb, unsafe.Pointer(&p.Cb[0]), C.size_t(uint(len(p.Cb))))
-	C.memcpy(CCr, unsafe.Pointer(&p.Cr[0]), C.size_t(uint(len(p.Cr))))
+// ToYCbCr converts image.Image to YCbCr.
+func (p *YCbCr) ToYCbCr(src image.Image) {
+	bounds := src.Bounds()
+
+	for row := 0; row < bounds.Max.Y; row++ {
+		for col := 0; col < bounds.Max.X; col++ {
+			r, g, b, _ := src.At(col, row).RGBA()
+			y, cb, cr := color.RGBToYCbCr(uint8(r), uint8(g), uint8(b))
+
+			p.Y[p.YOffset(col, row)] = y
+			p.Cb[p.COffset(col, row)] = cb
+			p.Cr[p.COffset(col, row)] = cr
+		}
+	}
 }
