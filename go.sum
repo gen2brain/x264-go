@@ -1,0 +1,4 @@
+github.com/gen2brain/x264-go/x264c v0.0.0-20210523192809-78c5ccc9da84 h1:s9CPT9ZCPlLkXadagFlbBgUSlxl7Tx7KtekDQrHhJlM=
+github.com/gen2brain/x264-go/x264c v0.0.0-20210523192809-78c5ccc9da84/go.mod h1:lshP4xmJNPCHscewcvsemVs62q8J8F0mh+FYBAfVG60=
+github.com/gen2brain/x264-go/yuv v0.0.0-20210523192809-78c5ccc9da84 h1:YEoFfsFQzLggJdiadUryc9hC1v5vrJx/C4szeKopnn8=
+github.com/gen2brain/x264-go/yuv v0.0.0-20210523192809-78c5ccc9da84/go.mod h1:xGOE/2fXjxu/ZONrm0EPqKHj/XDc13al1o48I3FQfHA=
