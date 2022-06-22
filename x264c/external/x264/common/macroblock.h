@@ -1,7 +1,7 @@
 /*****************************************************************************
  * macroblock.h: macroblock common functions
  *****************************************************************************
- * Copyright (C) 2005-2021 x264 project
+ * Copyright (C) 2005-2022 x264 project
  *
  * Authors: Loren Merritt <lorenm@u.washington.edu>
  *          Laurent Aimar <fenrir@via.ecp.fr>
@@ -361,7 +361,7 @@ int x264_mb_predict_mv_direct16x16( x264_t *h, int *b_changed );
  *      uses all neighbors, even those that didn't end up using this ref.
  *      h->mb. need only valid values from other blocks */
 #define x264_mb_predict_mv_ref16x16 x264_template(mb_predict_mv_ref16x16)
-void x264_mb_predict_mv_ref16x16( x264_t *h, int i_list, int i_ref, int16_t mvc[8][2], int *i_mvc );
+void x264_mb_predict_mv_ref16x16( x264_t *h, int i_list, int i_ref, int16_t (*mvc)[2], int *i_mvc );
 
 #define x264_mb_mc x264_template(mb_mc)
 void x264_mb_mc( x264_t *h );
@@ -395,9 +395,9 @@ static ALWAYS_INLINE uint32_t pack8to32( uint32_t a, uint32_t b, uint32_t c, uin
 static ALWAYS_INLINE uint32_t pack16to32_mask( int a, int b )
 {
 #if WORDS_BIGENDIAN
-   return (b&0xFFFF) + (a<<16);
+   return (b&0xFFFF) + ((uint32_t)a<<16);
 #else
-   return (a&0xFFFF) + (b<<16);
+   return (a&0xFFFF) + ((uint32_t)b<<16);
 #endif
 }
 static ALWAYS_INLINE uint64_t pack32to64( uint32_t a, uint32_t b )

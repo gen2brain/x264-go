@@ -1,7 +1,7 @@
 /*****************************************************************************
  * set: header writing
  *****************************************************************************
- * Copyright (C) 2003-2021 x264 project
+ * Copyright (C) 2003-2022 x264 project
  *
  * Authors: Laurent Aimar <fenrir@via.ecp.fr>
  *          Loren Merritt <lorenm@u.washington.edu>
@@ -241,7 +241,8 @@ void x264_sps_init( x264_sps_t *sps, int i_id, x264_param_t *param )
         sps->vui.i_log2_max_mv_length_vertical = (int)log2f( X264_MAX( 1, param->analyse.i_mv_range*4-1 ) ) + 1;
     }
 
-    sps->b_avcintra = !!param->i_avcintra_class;
+    sps->b_avcintra_hd = param->i_avcintra_class && param->i_avcintra_class <= 200;
+    sps->b_avcintra_4k = param->i_avcintra_class > 200;
     sps->i_cqm_preset = param->i_cqm_preset;
 }
 
@@ -325,8 +326,8 @@ void x264_sps_write( bs_t *s, x264_sps_t *sps )
         bs_write_ue( s, BIT_DEPTH-8 ); // bit_depth_chroma_minus8
         bs_write1( s, sps->b_qpprime_y_zero_transform_bypass );
         /* Exactly match the AVC-Intra bitstream */
-        bs_write1( s, sps->b_avcintra ); // seq_scaling_matrix_present_flag
-        if( sps->b_avcintra )
+        bs_write1( s, sps->b_avcintra_hd ); // seq_scaling_matrix_present_flag
+        if( sps->b_avcintra_hd )
         {
             scaling_list_write( s, sps, CQM_4IY );
             scaling_list_write( s, sps, CQM_4IC );
@@ -524,7 +525,7 @@ void x264_pps_write( bs_t *s, x264_sps_t *sps, x264_pps_t *pps )
     bs_write1( s, pps->b_constrained_intra_pred );
     bs_write1( s, pps->b_redundant_pic_cnt );
 
-    int b_scaling_list = !sps->b_avcintra && sps->i_cqm_preset != X264_CQM_FLAT;
+    int b_scaling_list = !sps->b_avcintra_hd && sps->i_cqm_preset != X264_CQM_FLAT;
     if( pps->b_transform_8x8_mode || b_scaling_list )
     {
         bs_write1( s, pps->b_transform_8x8_mode );
@@ -533,14 +534,27 @@ void x264_pps_write( bs_t *s, x264_sps_t *sps, x264_pps_t *pps )
         {
             scaling_list_write( s, sps, CQM_4IY );
             scaling_list_write( s, sps, CQM_4IC );
-            bs_write1( s, 0 ); // Cr = Cb
-            scaling_list_write( s, sps, CQM_4PY );
-            scaling_list_write( s, sps, CQM_4PC );
-            bs_write1( s, 0 ); // Cr = Cb
+            if( sps->b_avcintra_4k )
+            {
+                scaling_list_write( s, sps, CQM_4IC );
+                bs_write1( s, 0 ); // no inter
+                bs_write1( s, 0 ); // no inter
+                bs_write1( s, 0 ); // no inter
+            }
+            else
+            {
+                bs_write1( s, 0 ); // Cr = Cb
+                scaling_list_write( s, sps, CQM_4PY );
+                scaling_list_write( s, sps, CQM_4PC );
+                bs_write1( s, 0 ); // Cr = Cb
+            }
             if( pps->b_transform_8x8_mode )
             {
                 scaling_list_write( s, sps, CQM_8IY+4 );
-                scaling_list_write( s, sps, CQM_8PY+4 );
+                if( sps->b_avcintra_4k )
+                    bs_write1( s, 0 ); // no inter
+                else
+                    scaling_list_write( s, sps, CQM_8PY+4 );
                 if( sps->i_chroma_format_idc == CHROMA_444 )
                 {
                     scaling_list_write( s, sps, CQM_8IC+4 );
@@ -594,7 +608,7 @@ int x264_sei_version_write( x264_t *h, bs_t *s )
 
     memcpy( payload, uuid, 16 );
     sprintf( payload+16, "x264 - core %d%s - H.264/MPEG-4 AVC codec - "
-             "Copy%s 2003-2021 - http://www.videolan.org/x264.html - options: %s",
+             "Copy%s 2003-2022 - http://www.videolan.org/x264.html - options: %s",
              X264_BUILD, X264_VERSION, HAVE_GPL?"left":"right", opts );
     length = strlen(payload)+1;
 
@@ -851,6 +865,7 @@ int x264_sei_avcintra_vanc_write( x264_t *h, bs_t *s, int len )
     return 0;
 }
 
+#undef ERROR
 #define ERROR(...)\
 {\
     if( verbose )\

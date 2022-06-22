@@ -1,7 +1,7 @@
 /*****************************************************************************
  * mvpred.c: motion vector prediction
  *****************************************************************************
- * Copyright (C) 2003-2021 x264 project
+ * Copyright (C) 2003-2022 x264 project
  *
  * Authors: Loren Merritt <lorenm@u.washington.edu>
  *          Fiona Glaser <fiona@x264.com>
@@ -171,8 +171,8 @@ void x264_mb_predict_mv_pskip( x264_t *h, int16_t mv[2] )
     int16_t *mv_b  = h->mb.cache.mv[0][X264_SCAN8_0 - 8];
 
     if( i_refa == -2 || i_refb == -2 ||
-        !( i_refa | M32( mv_a ) ) ||
-        !( i_refb | M32( mv_b ) ) )
+        !( (uint32_t)i_refa | M32( mv_a ) ) ||
+        !( (uint32_t)i_refb | M32( mv_b ) ) )
     {
         M32( mv ) = 0;
     }
@@ -257,13 +257,13 @@ static int mb_predict_mv_direct16x16_temporal( x264_t *h )
 
         int i_part_8x8 = i_mb_8x8 + x8 + (ypart>>1) * h->mb.i_b8_stride;
         int i_ref1_ref = h->fref[1][0]->ref[0][i_part_8x8];
-        int i_ref = (map_col_to_list0(i_ref1_ref>>preshift) << postshift) + (offset&i_ref1_ref&MB_INTERLACED);
+        int i_ref = (map_col_to_list0(i_ref1_ref>>preshift) * (1 << postshift)) + (offset&i_ref1_ref&MB_INTERLACED);
 
         if( i_ref >= 0 )
         {
             int dist_scale_factor = h->mb.dist_scale_factor[i_ref][0];
             int16_t *mv_col = h->fref[1][0]->mv[0][i_mb_4x4 + 3*x8 + ypart * h->mb.i_b4_stride];
-            int16_t mv_y = (mv_col[1]<<yshift)/2;
+            int16_t mv_y = (mv_col[1] * (1 << yshift)) / 2;
             int l0x = ( dist_scale_factor * mv_col[0] + 128 ) >> 8;
             int l0y = ( dist_scale_factor * mv_y + 128 ) >> 8;
             if( h->param.i_threads > 1 && (l0y > h->mb.mv_max_spel[1] || l0y-mv_y > h->mb.mv_max_spel[1]) )
@@ -304,7 +304,7 @@ static ALWAYS_INLINE int mb_predict_mv_direct16x16_spatial( x264_t *h, int b_int
             mv_c   = h->mb.cache.mv[i_list][X264_SCAN8_0 - 8 - 1];
         }
 
-        int i_ref = X264_MIN3( (unsigned)i_refa, (unsigned)i_refb, (unsigned)i_refc );
+        int i_ref = (int)X264_MIN3( (unsigned)i_refa, (unsigned)i_refb, (unsigned)i_refc );
         if( i_ref < 0 )
         {
             i_ref = -1;
@@ -470,23 +470,23 @@ int x264_mb_predict_mv_direct16x16( x264_t *h, int *b_changed )
     {
         int changed;
 
-        changed  = M32( h->mb.cache.direct_mv[0][0] ) ^ M32( h->mb.cache.mv[0][x264_scan8[0]] );
-        changed |= M32( h->mb.cache.direct_mv[1][0] ) ^ M32( h->mb.cache.mv[1][x264_scan8[0]] );
+        changed  = (int)(M32( h->mb.cache.direct_mv[0][0] ) ^ M32( h->mb.cache.mv[0][x264_scan8[0]] ));
+        changed |= (int)(M32( h->mb.cache.direct_mv[1][0] ) ^ M32( h->mb.cache.mv[1][x264_scan8[0]] ));
         changed |= h->mb.cache.direct_ref[0][0] ^ h->mb.cache.ref[0][x264_scan8[0]];
         changed |= h->mb.cache.direct_ref[1][0] ^ h->mb.cache.ref[1][x264_scan8[0]];
         if( !changed && h->mb.i_partition != D_16x16 )
         {
-            changed |= M32( h->mb.cache.direct_mv[0][3] ) ^ M32( h->mb.cache.mv[0][x264_scan8[12]] );
-            changed |= M32( h->mb.cache.direct_mv[1][3] ) ^ M32( h->mb.cache.mv[1][x264_scan8[12]] );
+            changed |= (int)(M32( h->mb.cache.direct_mv[0][3] ) ^ M32( h->mb.cache.mv[0][x264_scan8[12]] ));
+            changed |= (int)(M32( h->mb.cache.direct_mv[1][3] ) ^ M32( h->mb.cache.mv[1][x264_scan8[12]] ));
             changed |= h->mb.cache.direct_ref[0][3] ^ h->mb.cache.ref[0][x264_scan8[12]];
             changed |= h->mb.cache.direct_ref[1][3] ^ h->mb.cache.ref[1][x264_scan8[12]];
         }
         if( !changed && h->mb.i_partition == D_8x8 )
         {
-            changed |= M32( h->mb.cache.direct_mv[0][1] ) ^ M32( h->mb.cache.mv[0][x264_scan8[4]] );
-            changed |= M32( h->mb.cache.direct_mv[1][1] ) ^ M32( h->mb.cache.mv[1][x264_scan8[4]] );
-            changed |= M32( h->mb.cache.direct_mv[0][2] ) ^ M32( h->mb.cache.mv[0][x264_scan8[8]] );
-            changed |= M32( h->mb.cache.direct_mv[1][2] ) ^ M32( h->mb.cache.mv[1][x264_scan8[8]] );
+            changed |= (int)(M32( h->mb.cache.direct_mv[0][1] ) ^ M32( h->mb.cache.mv[0][x264_scan8[4]] ));
+            changed |= (int)(M32( h->mb.cache.direct_mv[1][1] ) ^ M32( h->mb.cache.mv[1][x264_scan8[4]] ));
+            changed |= (int)(M32( h->mb.cache.direct_mv[0][2] ) ^ M32( h->mb.cache.mv[0][x264_scan8[8]] ));
+            changed |= (int)(M32( h->mb.cache.direct_mv[1][2] ) ^ M32( h->mb.cache.mv[1][x264_scan8[8]] ));
             changed |= h->mb.cache.direct_ref[0][1] ^ h->mb.cache.ref[0][x264_scan8[4]];
             changed |= h->mb.cache.direct_ref[1][1] ^ h->mb.cache.ref[1][x264_scan8[4]];
             changed |= h->mb.cache.direct_ref[0][2] ^ h->mb.cache.ref[0][x264_scan8[8]];
@@ -516,7 +516,7 @@ int x264_mb_predict_mv_direct16x16( x264_t *h, int *b_changed )
 }
 
 /* This just improves encoder performance, it's not part of the spec */
-void x264_mb_predict_mv_ref16x16( x264_t *h, int i_list, int i_ref, int16_t mvc[9][2], int *i_mvc )
+void x264_mb_predict_mv_ref16x16( x264_t *h, int i_list, int i_ref, int16_t (*mvc)[2], int *i_mvc )
 {
     int16_t (*mvr)[2] = h->mb.mvr[i_list][i_ref];
     int i = 0;
@@ -533,7 +533,7 @@ void x264_mb_predict_mv_ref16x16( x264_t *h, int i_list, int i_ref, int16_t mvc[
         int shift = 1 + MB_INTERLACED - h->mb.field[xy]; \
         int16_t *mvp = h->mb.mvr[i_list][i_ref<<1>>shift][xy]; \
         mvc[i][0] = mvp[0]; \
-        mvc[i][1] = mvp[1]<<1>>shift; \
+        mvc[i][1] = mvp[1]*2>>shift; \
         i++; \
     }
 
@@ -590,8 +590,8 @@ void x264_mb_predict_mv_ref16x16( x264_t *h, int i_list, int i_ref, int16_t mvc[
         { \
             int mb_index = h->mb.i_mb_xy + dx + dy*h->mb.i_mb_stride; \
             int scale = (curpoc - refpoc) * l0->inv_ref_poc[MB_INTERLACED&field]; \
-            mvc[i][0] = (l0->mv16x16[mb_index][0]*scale + 128) >> 8; \
-            mvc[i][1] = (l0->mv16x16[mb_index][1]*scale + 128) >> 8; \
+            mvc[i][0] = x264_clip3( (l0->mv16x16[mb_index][0]*scale + 128) >> 8, INT16_MIN, INT16_MAX ); \
+            mvc[i][1] = x264_clip3( (l0->mv16x16[mb_index][1]*scale + 128) >> 8, INT16_MIN, INT16_MAX ); \
             i++; \
         }
 

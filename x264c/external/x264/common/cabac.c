@@ -1,7 +1,7 @@
 /*****************************************************************************
  * cabac.c: arithmetic coder
  *****************************************************************************
- * Copyright (C) 2003-2021 x264 project
+ * Copyright (C) 2003-2022 x264 project
  *
  * Authors: Laurent Aimar <fenrir@via.ecp.fr>
  *          Loren Merritt <lorenm@u.washington.edu>
@@ -89,10 +89,10 @@ static inline void cabac_putbyte( x264_cabac_t *cb )
             cb->p[-1] += carry;
             while( bytes_outstanding > 0 )
             {
-                *(cb->p++) = carry-1;
+                *(cb->p++) = (uint8_t)(carry-1);
                 bytes_outstanding--;
             }
-            *(cb->p++) = out;
+            *(cb->p++) = (uint8_t)out;
             cb->i_bytes_outstanding = 0;
         }
     }
@@ -143,7 +143,7 @@ void x264_cabac_encode_ue_bypass( x264_cabac_t *cb, int exp_bits, int val )
 {
     uint32_t v = val + (1<<exp_bits);
     int k = 31 - x264_clz( v );
-    uint32_t x = (bypass_lut[k-exp_bits]<<exp_bits) + v;
+    uint32_t x = ((uint32_t)bypass_lut[k-exp_bits]<<exp_bits) + v;
     k = 2*k+1-exp_bits;
     int i = ((k-1)&7)+1;
     do {
