@@ -1,6 +1,8 @@
-github.com/gen2brain/x264-go v0.2.0 h1:4rpAC+0gwjsiRryWYXe0/cYujNu10VAkw0QyRfTMKyE=
-github.com/gen2brain/x264-go v0.2.0/go.mod h1:X0UBuPKXLZLyijyuwegYhv54LHhCLvdcuPYSuXnBasM=
-github.com/gen2brain/x264-go/x264c v0.0.0-20210523185153-54bdbefd1212 h1:vnOSGR5cgY4y0VBEkJBOPIOhUaNslmON7/Gc4z2Xdck=
-github.com/gen2brain/x264-go/x264c v0.0.0-20210523185153-54bdbefd1212/go.mod h1:lshP4xmJNPCHscewcvsemVs62q8J8F0mh+FYBAfVG60=
-github.com/gen2brain/x264-go/yuv v0.0.0-20210523185153-54bdbefd1212 h1:AXM+YcjeLgUJgWZekChQtJHFJe+A//2/WSmyEs1OaqU=
-github.com/gen2brain/x264-go/yuv v0.0.0-20210523185153-54bdbefd1212/go.mod h1:xGOE/2fXjxu/ZONrm0EPqKHj/XDc13al1o48I3FQfHA=
+github.com/gen2brain/x264-go v0.2.1 h1:5KV+GZk/YH8oUVvFijfJ3JoSIxexkSv/5ALp4v6NUq8=
+github.com/gen2brain/x264-go v0.2.1/go.mod h1:F6mwU9FyzrUbWE0f9lWdTPHBEDt/ugle+H61peryCZQ=
+github.com/gen2brain/x264-go/x264c v0.0.0-20220828141959-ddbf4cbb9814/go.mod h1:lshP4xmJNPCHscewcvsemVs62q8J8F0mh+FYBAfVG60=
+github.com/gen2brain/x264-go/x264c v0.0.0-20220828142632-56f773492998 h1:GPcrJdpf6lUg5FCfriDnyYvRbwVwdOnBbaBHv0UgRQ4=
+github.com/gen2brain/x264-go/x264c v0.0.0-20220828142632-56f773492998/go.mod h1:lshP4xmJNPCHscewcvsemVs62q8J8F0mh+FYBAfVG60=
+github.com/gen2brain/x264-go/yuv v0.0.0-20220622130850-9f6285ee8073/go.mod h1:xGOE/2fXjxu/ZONrm0EPqKHj/XDc13al1o48I3FQfHA=
+github.com/gen2brain/x264-go/yuv v0.0.0-20220828142632-56f773492998 h1:gKMkjbAy0Jnuacd0d296f918g/fIlBSDmNijNvZ4CdY=
+github.com/gen2brain/x264-go/yuv v0.0.0-20220828142632-56f773492998/go.mod h1:xGOE/2fXjxu/ZONrm0EPqKHj/XDc13al1o48I3FQfHA=
