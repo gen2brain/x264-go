@@ -8,6 +8,10 @@ import "C"
 
 import "unsafe"
 
+const (
+	rawParamSize = C.sizeof_x264_param_t
+)
+
 // Param type.
 type Param struct {
 	// CPU flags.
@@ -168,7 +172,6 @@ type Param struct {
 	BOpencl int32
 	// Specify count of GPU devices to skip, for CLI users.
 	IOpenclDevice int32
-	_             [4]byte
 	// Pass explicit cl_device_id as void*, for API users.
 	OpenclDeviceId unsafe.Pointer
 	// Filename (in UTF-8) of the compiled OpenCL kernel cache file.
@@ -186,7 +189,6 @@ type Param struct {
 	// Absolute cap on slices per frame; stops applying slice-max-size and slice-max-mbs if this is reached.
 	ISliceCountMax int32
 
-	_           [4]byte
 	ParamFree   *[0]byte
 	NaluProcess *[0]byte
 	Opaque      unsafe.Pointer
