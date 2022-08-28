@@ -426,6 +426,31 @@ type CropRect struct {
 	Bottom uint32
 }
 
+// MasteringDisplay SEI: Primary and white point chromaticity coordinates
+// in 0.00002 increments. Brightness units are 0.0001 cd/m^2.
+type MasteringDisplay struct {
+	// Enable writing this SEI
+	BMasteringDisplay int32
+	IGreenX           int32
+	IGreenY           int32
+	IBlueX            int32
+	IBlueY            int32
+	IRedX             int32
+	IRedY             int32
+	IWhiteX           int32
+	IWhiteY           int32
+	IDisplayMax       int64
+	IDisplayMin       int64
+}
+
+// ContentLightLevel SEI.
+type ContentLightLevel struct {
+	// Enable writing this SEI
+	BCll     int32
+	IMaxCll  int32
+	IMaxFall int32
+}
+
 // Zone type.
 // Zones: override ratecontrol or other options for specific sections of the video.
 // See EncoderReconfig() for which options can be changed.
@@ -446,17 +471,16 @@ type Zone struct {
 // Level (H.264 level restriction information) type.
 type Level struct {
 	LevelIdc byte
-	_        [3]byte
 	// Max macroblock processing rate (macroblocks/sec).
-	Mbps uint32
+	Mbps int32
 	// Max frame size (macroblocks).
-	FrameSize uint32
+	FrameSize int32
 	// Max decoded picture buffer (mbs).
-	Dpb uint32
+	Dpb int32
 	// Max bitrate (kbit/sec).
-	Bitrate uint32
+	Bitrate int32
 	// Max vbv buffer (kbit).
-	Cpb uint32
+	Cpb int32
 	// Max vertical mv component range (pixels).
 	MvRange uint16
 	// Max mvs per 2 consecutive mbs.
@@ -482,9 +506,9 @@ type Hrd struct {
 
 // SeiPayload type.
 type SeiPayload struct {
-	PayloadSize int32
-	PayloadType int32
-	Payload     *uint8
+	Size    int32
+	Type    int32
+	Payload *uint8
 }
 
 // Sei type.

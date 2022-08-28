@@ -63,10 +63,11 @@ type Param struct {
 	IBframeAdaptive int32
 	IBframeBias     int32
 	// Keep some B-frames as references: 0=off, 1=strict hierarchical, 2=normal.
-	IBframePyramid int32
-	BOpenGop       int32
-	BBlurayCompat  int32
-	IAvcintraClass int32
+	IBframePyramid  int32
+	BOpenGop        int32
+	BBlurayCompat   int32
+	IAvcintraClass  int32
+	IAvcintraFlavor int32
 
 	BDeblockingFilter int32
 	// [-6, 6] -6 light filter, 6 strong.
@@ -117,6 +118,11 @@ type Param struct {
 
 	// Frame packing arrangement flag.
 	IFramePacking int32
+
+	MasteringDisplay  MasteringDisplay
+	ContentLightLevel ContentLightLevel
+
+	IAlternativeTransfer int32
 
 	// Muxing parameters.
 	// Generate access unit delimiters.
@@ -183,6 +189,7 @@ type Param struct {
 	_           [4]byte
 	ParamFree   *[0]byte
 	NaluProcess *[0]byte
+	Opaque      unsafe.Pointer
 }
 
 // cptr return C pointer.
