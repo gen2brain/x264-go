@@ -15,7 +15,6 @@ C source code is included in package. If you want to use external shared/static 
 ### Build tags
 
 * `extlib` - use external x264 library
-* `compat` - enable compat mode (for versions < 0.153.x, used with extlib)
 * `pkgconfig` - enable pkg-config (used with extlib)
 
 
