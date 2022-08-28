@@ -1,3 +1,4 @@
+//go:build compat
 // +build compat
 
 package x264c
