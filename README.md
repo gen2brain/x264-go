@@ -1,6 +1,5 @@
 ## x264-go
 [![Build Status](https://github.com/gen2brain/x264-go/actions/workflows/test.yml/badge.svg)](https://github.com/gen2brain/x264-go/actions)
-[![AppVeyor Build Status](https://ci.appveyor.com/api/projects/status/wfkqlac5ffwk5xgb?svg=true)](https://ci.appveyor.com/project/gen2brain/x264-go)
 [![GoDoc](https://godoc.org/github.com/gen2brain/x264-go?status.svg)](https://godoc.org/github.com/gen2brain/x264-go) 
 [![Go Report Card](https://goreportcard.com/badge/github.com/gen2brain/x264-go?branch=master)](https://goreportcard.com/report/github.com/gen2brain/x264-go) 
 
