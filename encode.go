@@ -150,7 +150,7 @@ func (e *Encoder) Encode(im image.Image) (err error) {
 	if rgba {
 		e.img.ToYCbCr(im)
 	} else if ycbcr {
-		e.img = im
+		e.img = im.(*YCbCr)
 	} else {
 		e.img.ToYCbCrDraw(im)
 	}
