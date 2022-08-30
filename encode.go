@@ -145,8 +145,12 @@ func (e *Encoder) Encode(im image.Image) (err error) {
 	var picOut x264c.Picture
 
 	_, rgba := im.(*image.RGBA)
+	_, ycbcr := im.(*YCbCr)
+
 	if rgba {
 		e.img.ToYCbCr(im)
+	} else if ycbcr {
+		e.img = im
 	} else {
 		e.img.ToYCbCrDraw(im)
 	}
