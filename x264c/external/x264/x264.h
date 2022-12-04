@@ -43,8 +43,9 @@ extern "C" {
 
 #include <stdarg.h>
 
-#include "x264_config.h"
-
+//#include "x264_config.h"
+#define X264_VERSION ""
+#define X264_POINTVER "0.164.x"
 #define X264_BUILD 164
 
 #ifdef _WIN32
