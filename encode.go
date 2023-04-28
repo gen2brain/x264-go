@@ -37,6 +37,12 @@ type Options struct {
 	Preset string
 	// Profiles: baseline, main, high, high10, high422, high444.
 	Profile string
+	// RateControl: cqp, crf, abr.
+	RateControl string
+	// RateConstant.
+	RateConstant float32
+	// RateMax.
+	RateMax float32
 	// Log level.
 	LogLevel int32
 }
@@ -75,7 +81,7 @@ func NewEncoder(w io.Writer, opts *Options) (e *Encoder, err error) {
 
 	param := x264c.Param{}
 
-	if e.opts.Preset != "" && e.opts.Profile != "" {
+	if e.opts.Preset != "" && e.opts.Tune != "" {
 		ret := x264c.ParamDefaultPreset(&param, e.opts.Preset, e.opts.Tune)
 		if ret < 0 {
 			err = fmt.Errorf("x264: invalid preset/tune name")
@@ -105,6 +111,32 @@ func NewEncoder(w io.Writer, opts *Options) (e *Encoder, err error) {
 		if ret < 0 {
 			err = fmt.Errorf("x264: invalid profile name")
 			return
+		}
+	}
+
+	if e.opts.RateControl != "" {
+		switch e.opts.RateControl {
+		case "cqp":
+			param.Rc.IRcMethod = x264c.RcCqp
+			if e.opts.RateConstant != 0 {
+				param.Rc.IQpConstant = int32(e.opts.RateConstant)
+			}
+			if e.opts.RateMax != 0 {
+				param.Rc.IQpMax = int32(e.opts.RateMax)
+			}
+		case "crf":
+			param.Rc.IRcMethod = x264c.RcCrf
+			if e.opts.RateConstant != 0 {
+				param.Rc.FRfConstant = e.opts.RateConstant
+			}
+			if e.opts.RateMax != 0 {
+				param.Rc.FRfConstantMax = e.opts.RateMax
+			}
+		case "abr":
+			param.Rc.IRcMethod = x264c.RcAbr
+			if e.opts.RateMax != 0 {
+				param.Rc.IVbvMaxBitrate = int32(e.opts.RateMax)
+			}
 		}
 	}
 
