@@ -57,6 +57,7 @@ type Encoder struct {
 
 	csp int32
 	pts int64
+	dts int64
 
 	nnals int32
 	nals  []*x264c.Nal
@@ -229,7 +230,14 @@ func (e *Encoder) Encode(im image.Image) (err error) {
 		}
 	}
 
+	e.dts = picOut.IDts
+
 	return
+}
+
+// GetTimestamp returns the current PTS and DTS.
+func (e *Encoder) GetTimestamp() (int64, int64) {
+	return e.pts, e.dts
 }
 
 // Flush flushes encoder.
