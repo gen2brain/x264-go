@@ -235,8 +235,8 @@ func (e *Encoder) Encode(im image.Image) (err error) {
 	return
 }
 
-// GetTimestamp returns the current PTS and DTS.
-func (e *Encoder) GetTimestamp() (int64, int64) {
+// Timestamp returns the current PTS and DTS.
+func (e *Encoder) Timestamp() (int64, int64) {
 	return e.pts, e.dts
 }
 
