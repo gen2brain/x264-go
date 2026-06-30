@@ -1,7 +1,7 @@
 /*****************************************************************************
  * predict.c: intra prediction
  *****************************************************************************
- * Copyright (C) 2003-2022 x264 project
+ * Copyright (C) 2003-2025 x264 project
  *
  * Authors: Laurent Aimar <fenrir@via.ecp.fr>
  *          Loren Merritt <lorenm@u.washington.edu>
@@ -45,6 +45,9 @@
 #endif
 #if HAVE_MSA
 #   include "mips/predict.h"
+#endif
+#if HAVE_LSX
+#   include "loongarch/predict.h"
 #endif
 
 /****************************************************************************
@@ -924,6 +927,10 @@ void x264_predict_16x16_init( uint32_t cpu, x264_predict_t pf[7] )
     }
 #endif
 #endif
+
+#if HAVE_LSX
+    x264_predict_16x16_init_loongarch( cpu, pf );
+#endif
 }
 
 void x264_predict_8x8c_init( uint32_t cpu, x264_predict_t pf[7] )
@@ -960,6 +967,10 @@ void x264_predict_8x8c_init( uint32_t cpu, x264_predict_t pf[7] )
         pf[I_PRED_CHROMA_P ]     = x264_intra_predict_plane_8x8_msa;
     }
 #endif
+#endif
+
+#if HAVE_LSX
+    x264_predict_8x8c_init_loongarch( cpu, pf );
 #endif
 }
 
@@ -1022,6 +1033,10 @@ void x264_predict_8x8_init( uint32_t cpu, x264_predict8x8_t pf[12], x264_predict
     }
 #endif
 #endif
+
+#if HAVE_LSX
+    x264_predict_8x8_init_loongarch( cpu, pf, predict_filter );
+#endif
 }
 
 void x264_predict_4x4_init( uint32_t cpu, x264_predict_t pf[12] )
@@ -1049,6 +1064,10 @@ void x264_predict_4x4_init( uint32_t cpu, x264_predict_t pf[12] )
 
 #if HAVE_AARCH64
     x264_predict_4x4_init_aarch64( cpu, pf );
+#endif
+
+#if HAVE_LSX
+    x264_predict_4x4_init_loongarch( cpu, pf );
 #endif
 }
 

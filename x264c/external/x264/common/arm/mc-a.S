@@ -1,7 +1,7 @@
 /*****************************************************************************
  * mc.S: arm motion compensation
  *****************************************************************************
- * Copyright (C) 2009-2022 x264 project
+ * Copyright (C) 2009-2025 x264 project
  *
  * Authors: David Conrad <lessen42@gmail.com>
  *          Mans Rullgard <mans@mansr.com>
@@ -916,8 +916,8 @@ mc_chroma_w\width:
 
     beq             4f
 
-    vld1.64          {d4}, [r3], r4
-    vld1.64          {d6}, [r3], r4
+    vld1.64         {d4}, [r3], r4
+    vld1.64         {d6}, [r3], r4
 
 3:  // vertical interpolation loop
 
@@ -982,8 +982,8 @@ mc_chroma_w\width:
     pop             {r4-r8, pc}
 .endm
 
-   CHROMA_MC 2, 16
-   CHROMA_MC 4, 32
+    CHROMA_MC       2, 16
+    CHROMA_MC       4, 32
 
 mc_chroma_w8:
     CHROMA_MC_START d4, d7, d8, d11

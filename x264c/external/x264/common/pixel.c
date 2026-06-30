@@ -1,7 +1,7 @@
 /*****************************************************************************
  * pixel.c: pixel metrics
  *****************************************************************************
- * Copyright (C) 2003-2022 x264 project
+ * Copyright (C) 2003-2025 x264 project
  *
  * Authors: Loren Merritt <lorenm@u.washington.edu>
  *          Laurent Aimar <fenrir@via.ecp.fr>
@@ -45,7 +45,9 @@
 #if HAVE_MSA
 #   include "mips/pixel.h"
 #endif
-
+#if HAVE_LSX
+#   include "loongarch/pixel.h"
+#endif
 
 /****************************************************************************
  * pixel_sad_WxH
@@ -827,12 +829,32 @@ void x264_pixel_init( uint32_t cpu, x264_pixel_function_t *pixf )
 #define INIT8_NAME( name1, name2, cpu ) \
     INIT7_NAME( name1, name2, cpu ) \
     pixf->name1[PIXEL_4x16]  = x264_pixel_##name2##_4x16##cpu;
+#if HAVE_SVE
+#define INIT7_NAME_SVE_SSD_10BIT( ) \
+    pixf->ssd[PIXEL_4x4]   = x264_pixel_ssd_4x4_sve; \
+    pixf->ssd[PIXEL_4x8]   = x264_pixel_ssd_4x8_sve;
+#endif
+#if HAVE_SVE
+#define INIT8_NAME_SVE_SSD( ) \
+    pixf->ssd[PIXEL_8x8]   = x264_pixel_ssd_8x8_sve; \
+    pixf->ssd[PIXEL_8x4]   = x264_pixel_ssd_8x4_sve; \
+    pixf->ssd[PIXEL_4x8]   = x264_pixel_ssd_4x8_sve; \
+    pixf->ssd[PIXEL_4x4]   = x264_pixel_ssd_4x4_sve; \
+    pixf->ssd[PIXEL_4x16]  = x264_pixel_ssd_4x16_sve;
+#define INIT8_NAME_SVE_SSD_10BIT() \
+    INIT7_NAME_SVE_SSD_10BIT() \
+    pixf->ssd[PIXEL_4x16]  = x264_pixel_ssd_4x16_sve;
+#endif
 #define INIT2( name, cpu ) INIT2_NAME( name, name, cpu )
 #define INIT4( name, cpu ) INIT4_NAME( name, name, cpu )
 #define INIT5( name, cpu ) INIT5_NAME( name, name, cpu )
 #define INIT6( name, cpu ) INIT6_NAME( name, name, cpu )
 #define INIT7( name, cpu ) INIT7_NAME( name, name, cpu )
 #define INIT8( name, cpu ) INIT8_NAME( name, name, cpu )
+#if HAVE_SVE
+#define INIT8_SVE_SSD( ) INIT8_NAME_SVE_SSD( )
+#define INIT8_SVE_SSD_10BIT( ) INIT8_NAME_SVE_SSD_10BIT( )
+#endif
 
 #define INIT_ADS( cpu ) \
     pixf->ads[PIXEL_16x16] = x264_pixel_ads4##cpu;\
@@ -1054,6 +1076,44 @@ void x264_pixel_init( uint32_t cpu, x264_pixel_function_t *pixf )
         pixf->var2[PIXEL_8x16] = x264_pixel_var2_8x16_avx512;
     }
 #endif // HAVE_MMX
+#if HAVE_AARCH64
+    if( cpu&X264_CPU_NEON )
+    {
+        INIT8( sad, _neon );
+        INIT7( sad_x3, _neon);
+        pixf->vsad = x264_pixel_vsad_neon;
+        pixf->asd8 = x264_pixel_asd8_neon;
+        INIT8(ssd, _neon);
+        pixf->satd[PIXEL_8x4] = x264_pixel_satd_8x4_neon;
+        pixf->satd[PIXEL_4x8] = x264_pixel_satd_4x8_neon;
+        pixf->satd[PIXEL_4x4] = x264_pixel_satd_4x4_neon;
+        pixf->satd[PIXEL_4x16] = x264_pixel_satd_4x16_neon;
+        pixf->satd[PIXEL_8x8] = x264_pixel_satd_8x8_neon;
+        pixf->satd[PIXEL_8x16] = x264_pixel_satd_8x16_neon;
+        pixf->ssd_nv12_core     = x264_pixel_ssd_nv12_core_neon;
+        pixf->var[PIXEL_8x8]    = x264_pixel_var_8x8_neon;
+        pixf->var[PIXEL_8x16]   = x264_pixel_var_8x16_neon;
+        pixf->var[PIXEL_16x16]  = x264_pixel_var_16x16_neon;
+        pixf->var2[PIXEL_8x8]    = x264_pixel_var2_8x8_neon;
+        pixf->var2[PIXEL_8x16]   = x264_pixel_var2_8x16_neon;
+        pixf->satd[PIXEL_16x8]   = x264_pixel_satd_16x8_neon;
+        pixf->satd[PIXEL_16x16]  = x264_pixel_satd_16x16_neon;
+        INIT7(sad_x4, _neon);
+        pixf->sa8d[PIXEL_8x8]    = x264_pixel_sa8d_8x8_neon;
+        pixf->sa8d[PIXEL_16x16]  = x264_pixel_sa8d_16x16_neon;
+        pixf->sa8d_satd[PIXEL_16x16] = x264_pixel_sa8d_satd_16x16_neon;
+        INIT4(hadamard_ac, _neon);
+        pixf->ssim_4x4x2_core    = x264_pixel_ssim_4x4x2_core_neon;
+        pixf->ssim_end4 = x264_pixel_ssim_end4_neon;
+    }
+#if HAVE_SVE
+    if( cpu&X264_CPU_SVE )
+    {
+        INIT8_SVE_SSD_10BIT();
+    }
+#endif
+#endif // HAVE_AARCH64
+
 #else // !HIGH_BIT_DEPTH
 #if HAVE_MMX
     if( cpu&X264_CPU_MMX )
@@ -1465,6 +1525,35 @@ void x264_pixel_init( uint32_t cpu, x264_pixel_function_t *pixf )
         pixf->ssim_4x4x2_core   = x264_pixel_ssim_4x4x2_core_neon;
         pixf->ssim_end4         = x264_pixel_ssim_end4_neon;
     }
+#if HAVE_DOTPROD
+    if( cpu&X264_CPU_DOTPROD ) {
+        pixf->sad[PIXEL_16x8]  = x264_pixel_sad_16x8_neon_dotprod;
+        pixf->sad[PIXEL_16x16] = x264_pixel_sad_16x16_neon_dotprod;
+        pixf->sad_x3[PIXEL_16x8]  = x264_pixel_sad_x3_16x8_neon_dotprod;
+        pixf->sad_x3[PIXEL_16x16] = x264_pixel_sad_x3_16x16_neon_dotprod;
+        pixf->sad_x4[PIXEL_16x8]  = x264_pixel_sad_x4_16x8_neon_dotprod;
+        pixf->sad_x4[PIXEL_16x16] = x264_pixel_sad_x4_16x16_neon_dotprod;
+        pixf->ssd[PIXEL_8x4]  = x264_pixel_ssd_8x4_neon_dotprod;
+        pixf->ssd[PIXEL_8x8] = x264_pixel_ssd_8x8_neon_dotprod;
+        pixf->ssd[PIXEL_8x16]  = x264_pixel_ssd_8x16_neon_dotprod;
+        pixf->ssd[PIXEL_16x16] = x264_pixel_ssd_16x16_neon_dotprod;
+        pixf->ssd[PIXEL_16x8]  = x264_pixel_ssd_16x8_neon_dotprod;
+        pixf->vsad = x264_pixel_vsad_neon_dotprod;
+    }
+#endif // HAVE_DOTPROD
+
+#if HAVE_SVE
+    if( cpu&X264_CPU_SVE )
+    {
+        INIT8_SVE_SSD( );
+        INIT4( hadamard_ac, _sve );
+
+        pixf->sa8d[PIXEL_8x8]   = x264_pixel_sa8d_8x8_sve;
+
+        pixf->var[PIXEL_8x8]    = x264_pixel_var_8x8_sve;
+        pixf->var[PIXEL_8x16]   = x264_pixel_var_8x16_sve;
+    }
+#endif
 #endif // HAVE_AARCH64
 
 #if HAVE_MSA
@@ -1498,6 +1587,67 @@ void x264_pixel_init( uint32_t cpu, x264_pixel_function_t *pixf )
         pixf->sa8d[PIXEL_8x8]   = x264_pixel_sa8d_8x8_msa;
     }
 #endif // HAVE_MSA
+
+#if HAVE_LSX
+    if( cpu&X264_CPU_LSX )
+    {
+        INIT8( sad, _lsx );
+        INIT8_NAME( sad_aligned, sad, _lsx );
+        INIT8( ssd, _lsx );
+        INIT7( sad_x3, _lsx );
+        INIT7( sad_x4, _lsx );
+        INIT8( satd, _lsx );
+        INIT4( hadamard_ac, _lsx );
+
+        pixf->intra_sad_x3_4x4  = x264_intra_sad_x3_4x4_lsx;
+        pixf->intra_satd_x3_4x4 = x264_intra_satd_x3_4x4_lsx;
+
+        pixf->intra_sad_x3_8x8    = x264_intra_sad_x3_8x8_lsx;
+        pixf->intra_sad_x3_8x8c   = x264_intra_sad_x3_8x8c_lsx;
+        pixf->intra_sad_x3_16x16  = x264_intra_sad_x3_16x16_lsx;
+        pixf->intra_satd_x3_16x16 = x264_intra_satd_x3_16x16_lsx;
+        pixf->intra_satd_x3_8x8c  = x264_intra_satd_x3_8x8c_lsx;
+        pixf->intra_sa8d_x3_8x8   = x264_intra_sa8d_x3_8x8_lsx;
+
+        pixf->var2[PIXEL_8x16] = x264_pixel_var2_8x16_lsx;
+        pixf->var2[PIXEL_8x8]  = x264_pixel_var2_8x8_lsx;
+        pixf->var[PIXEL_16x16] = x264_pixel_var_16x16_lsx;
+        pixf->var[PIXEL_8x16]  = x264_pixel_var_8x16_lsx;
+        pixf->var[PIXEL_8x8]   = x264_pixel_var_8x8_lsx;
+        pixf->sa8d[PIXEL_16x16] = x264_pixel_sa8d_16x16_lsx;
+        pixf->sa8d[PIXEL_8x8]   = x264_pixel_sa8d_8x8_lsx;
+    }
+
+    if( cpu&X264_CPU_LASX )
+    {
+        INIT4( ssd, _lasx );
+        INIT4( hadamard_ac, _lasx );
+
+        pixf->satd[PIXEL_16x16] = x264_pixel_satd_16x16_lasx;
+        pixf->satd[PIXEL_16x8] = x264_pixel_satd_16x8_lasx;
+        pixf->satd[PIXEL_8x16] = x264_pixel_satd_8x16_lasx;
+        pixf->satd[PIXEL_8x8] = x264_pixel_satd_8x8_lasx;
+        pixf->satd[PIXEL_8x4] = x264_pixel_satd_8x4_lasx;
+        pixf->satd[PIXEL_4x16] = x264_pixel_satd_4x16_lasx;
+        pixf->satd[PIXEL_4x8] = x264_pixel_satd_4x8_lasx;
+
+        pixf->sad[PIXEL_8x4] = x264_pixel_sad_8x4_lasx;
+
+        pixf->sad_x4[PIXEL_16x16] = x264_pixel_sad_x4_16x16_lasx;
+        pixf->sad_x4[PIXEL_16x8] = x264_pixel_sad_x4_16x8_lasx;
+        pixf->sad_x4[PIXEL_8x8] = x264_pixel_sad_x4_8x8_lasx;
+        pixf->sad_x4[PIXEL_8x4] = x264_pixel_sad_x4_8x4_lasx;
+        pixf->sad_x3[PIXEL_16x16] = x264_pixel_sad_x3_16x16_lasx;
+        pixf->sad_x3[PIXEL_16x8] = x264_pixel_sad_x3_16x8_lasx;
+        pixf->intra_satd_x3_16x16 = x264_intra_satd_x3_16x16_lasx;
+        pixf->intra_sa8d_x3_8x8   = x264_intra_sa8d_x3_8x8_lasx;
+
+        pixf->var2[PIXEL_8x16]  = x264_pixel_var2_8x16_lasx;
+        pixf->var2[PIXEL_8x8]   = x264_pixel_var2_8x8_lasx;
+        pixf->sa8d[PIXEL_16x16] = x264_pixel_sa8d_16x16_lasx;
+        pixf->sa8d[PIXEL_8x8]   = x264_pixel_sa8d_8x8_lasx;
+    }
+#endif /* HAVE_LSX */
 
 #endif // HIGH_BIT_DEPTH
 #if HAVE_ALTIVEC

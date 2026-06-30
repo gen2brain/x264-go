@@ -1,7 +1,7 @@
 /*****************************************************************************
  * x264.h: x264 public header
  *****************************************************************************
- * Copyright (C) 2003-2022 x264 project
+ * Copyright (C) 2003-2025 x264 project
  *
  * Authors: Laurent Aimar <fenrir@via.ecp.fr>
  *          Loren Merritt <lorenm@u.washington.edu>
@@ -45,8 +45,8 @@ extern "C" {
 
 //#include "x264_config.h"
 #define X264_VERSION ""
-#define X264_POINTVER "0.164.x"
-#define X264_BUILD 164
+#define X264_POINTVER "0.165.x"
+#define X264_BUILD 165
 
 #ifdef _WIN32
 #   define X264_DLL_IMPORT __declspec(dllimport)
@@ -178,9 +178,20 @@ typedef struct x264_nal_t
 #define X264_CPU_NEON            0x0000002U  /* ARM NEON */
 #define X264_CPU_FAST_NEON_MRC   0x0000004U  /* Transfer from NEON to ARM register is fast (Cortex-A9) */
 #define X264_CPU_ARMV8           0x0000008U
+#define X264_CPU_SVE             0x0000010U  /* AArch64 SVE */
+#define X264_CPU_SVE2            0x0000020U  /* AArch64 SVE2 */
+#define X264_CPU_DOTPROD         0x0000040U  /* AArch64 DotProd */
+#define X264_CPU_I8MM            0x0000080U  /* AArch64 I8MM */
+
+/* RISCV64 */
+#define X264_CPU_RVV             0x0000001U  /* RISCV64 RVV */
 
 /* MIPS */
 #define X264_CPU_MSA             0x0000001U  /* MIPS MSA */
+
+/* LOONGARCH */
+#define X264_CPU_LSX             0x0000001U  /* LOONGARCH LSX */
+#define X264_CPU_LASX            0x0000002U  /* LOONGARCH LASX */
 
 /* Analyse flags */
 #define X264_ANALYSE_I4x4       0x0001U  /* Analyse i4x4 */

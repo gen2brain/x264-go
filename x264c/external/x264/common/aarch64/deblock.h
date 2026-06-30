@@ -1,7 +1,7 @@
 /*****************************************************************************
  * deblock.h: aarch64 deblocking
  *****************************************************************************
- * Copyright (C) 2017-2022 x264 project
+ * Copyright (C) 2017-2025 x264 project
  *
  * Authors: Anton Mitrofanov <BugMaster@narod.ru>
  *
@@ -54,5 +54,8 @@ void x264_deblock_v_chroma_intra_neon( uint8_t *pix, intptr_t stride, int alpha,
 void x264_deblock_h_luma_intra_neon( uint8_t *pix, intptr_t stride, int alpha, int beta );
 #define x264_deblock_v_luma_intra_neon x264_template(deblock_v_luma_intra_neon)
 void x264_deblock_v_luma_intra_neon( uint8_t *pix, intptr_t stride, int alpha, int beta );
+
+#define x264_deblock_v_chroma_sve x264_template(deblock_v_chroma_sve)
+void x264_deblock_v_chroma_sve( uint8_t *pix, intptr_t stride, int alpha, int beta, int8_t *tc0 );
 
 #endif

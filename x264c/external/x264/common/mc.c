@@ -1,7 +1,7 @@
 /*****************************************************************************
  * mc.c: motion compensation
  *****************************************************************************
- * Copyright (C) 2003-2022 x264 project
+ * Copyright (C) 2003-2025 x264 project
  *
  * Authors: Laurent Aimar <fenrir@via.ecp.fr>
  *          Loren Merritt <lorenm@u.washington.edu>
@@ -40,6 +40,9 @@
 #endif
 #if HAVE_MSA
 #include "mips/mc.h"
+#endif
+#if HAVE_LSX
+#   include "loongarch/mc.h"
 #endif
 
 
@@ -686,6 +689,9 @@ void x264_mc_init( uint32_t cpu, x264_mc_functions_t *pf, int cpu_independent )
 #if HAVE_MSA
     if( cpu&X264_CPU_MSA )
         x264_mc_init_mips( cpu, pf );
+#endif
+#if HAVE_LSX
+    x264_mc_init_loongarch( cpu, pf );
 #endif
 
     if( cpu_independent )

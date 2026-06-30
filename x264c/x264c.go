@@ -70,8 +70,22 @@ const (
 	// Transfer from NEON to ARM register is fast (Cortex-A9).
 	CpuFastNeonMrc = 0x0000004
 	CpuArmv8       = 0x0000008
+	// AArch64 SVE.
+	CpuSve = 0x0000010
+	// AArch64 SVE2.
+	CpuSve2 = 0x0000020
+	// AArch64 DotProd.
+	CpuDotprod = 0x0000040
+	// AArch64 I8MM.
+	CpuI8mm = 0x0000080
+	// RISCV64 RVV.
+	CpuRvv = 0x0000001
 	// MIPS MSA.
 	CpuMsa = 0x0000001
+	// LOONGARCH LSX.
+	CpuLsx = 0x0000001
+	// LOONGARCH LASX.
+	CpuLasx = 0x0000002
 
 	// Analyse i4x4
 	AnalyseI4x4 = 0x0001

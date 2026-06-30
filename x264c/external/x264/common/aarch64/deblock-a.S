@@ -1,7 +1,7 @@
 /*****************************************************************************
  * deblock.S: aarch64 deblocking
  *****************************************************************************
- * Copyright (C) 2009-2022 x264 project
+ * Copyright (C) 2009-2025 x264 project
  *
  * Authors: Mans Rullgard <mans@mansr.com>
  *          Janne Grunau <janne-x264@jannau.net>
@@ -25,20 +25,7 @@
  *****************************************************************************/
 
 #include "asm.S"
-
-.macro h264_loop_filter_start
-    cmp             w2,  #0
-    ldr             w6,  [x4]
-    ccmp            w3,  #0, #0, ne
-    mov             v24.s[0], w6
-    and             w8,  w6,  w6,  lsl #16
-    b.eq            1f
-    ands            w8,  w8,  w8,  lsl #8
-    b.ge            2f
-1:
-    ret
-2:
-.endm
+#include "deblock-a-common.S"
 
 .macro h264_loop_filter_luma
     dup             v22.16b, w2                     // alpha
@@ -714,10 +701,10 @@ function deblock_strength_neon, export=1
 bframe:
     // load bytes ref
     add         x2,  x2,  #16
-    ld1        {v31.d}[1], [x1], #8
-    ld1        {v1.16b}, [x1], #16
+    ld1         {v31.d}[1], [x1], #8
+    ld1         {v1.16b}, [x1], #16
     movi        v0.16b,  #0
-    ld1        {v2.16b}, [x1], #16
+    ld1         {v2.16b}, [x1], #16
     ext         v3.16b,  v0.16b,  v1.16b,  #15
     ext         v0.16b,  v0.16b,  v2.16b,  #15
     unzip       v21.4s,  v22.4s,  v1.4s,   v2.4s
@@ -729,20 +716,20 @@ bframe:
     orr         v4.16b,  v4.16b,  v0.16b
     orr         v5.16b,  v5.16b,  v1.16b
 
-    ld1        {v21.8h}, [x2], #16      // mv + 0x10
-    ld1        {v19.8h}, [x2], #16      // mv + 0x20
-    ld1        {v22.8h}, [x2], #16      // mv + 0x30
-    ld1        {v18.8h}, [x2], #16      // mv + 0x40
-    ld1        {v23.8h}, [x2], #16      // mv + 0x50
+    ld1         {v21.8h}, [x2], #16      // mv + 0x10
+    ld1         {v19.8h}, [x2], #16      // mv + 0x20
+    ld1         {v22.8h}, [x2], #16      // mv + 0x30
+    ld1         {v18.8h}, [x2], #16      // mv + 0x40
+    ld1         {v23.8h}, [x2], #16      // mv + 0x50
     ext         v19.16b, v19.16b, v22.16b, #12
     ext         v18.16b, v18.16b, v23.16b, #12
     sabd        v0.8h,   v22.8h,  v19.8h
-    ld1        {v19.8h}, [x2], #16      // mv + 0x60
+    ld1         {v19.8h}, [x2], #16      // mv + 0x60
     sabd        v1.8h,   v23.8h,  v18.8h
-    ld1        {v24.8h}, [x2], #16      // mv + 0x70
+    ld1         {v24.8h}, [x2], #16      // mv + 0x70
     uqxtn       v0.8b,   v0.8h
-    ld1        {v18.8h}, [x2], #16      // mv + 0x80
-    ld1        {v25.8h}, [x2], #16      // mv + 0x90
+    ld1         {v18.8h}, [x2], #16      // mv + 0x80
+    ld1         {v25.8h}, [x2], #16      // mv + 0x90
     uqxtn2      v0.16b,  v1.8h
     ext         v19.16b, v19.16b, v24.16b, #12
     ext         v18.16b, v18.16b, v25.16b, #12
@@ -777,10 +764,10 @@ bframe:
 
     movi        v6.16b, #1
     // load bytes nnz
-    ld1        {v31.d}[1], [x0], #8
-    ld1        {v1.16b}, [x0], #16
+    ld1         {v31.d}[1], [x0], #8
+    ld1         {v1.16b}, [x0], #16
     movi        v0.16b,  #0
-    ld1        {v2.16b}, [x0], #16
+    ld1         {v2.16b}, [x0], #16
     ext         v3.16b,  v0.16b,  v1.16b,  #15
     ext         v0.16b,  v0.16b,  v2.16b,  #15
     unzip       v21.4s,  v22.4s,  v1.4s,   v2.4s
@@ -788,7 +775,7 @@ bframe:
     ext         v21.16b, v31.16b, v22.16b, #12
 
     movrel      x7,  transpose_table
-    ld1        {v7.16b}, [x7]
+    ld1         {v7.16b}, [x7]
     orr         v0.16b,  v20.16b, v22.16b
     orr         v1.16b,  v21.16b, v22.16b
     umin        v0.16b,  v0.16b,  v6.16b
@@ -800,8 +787,8 @@ bframe:
     umax        v4.16b,  v4.16b,  v0.16b
     umax        v5.16b,  v5.16b,  v1.16b
     tbl         v6.16b, {v4.16b}, v7.16b
-    st1        {v5.16b}, [x3], x6       // bs[1]
-    st1        {v6.16b}, [x3]           // bs[0]
+    st1         {v5.16b}, [x3], x6       // bs[1]
+    st1         {v6.16b}, [x3]           // bs[0]
     ret
 endfunc
 

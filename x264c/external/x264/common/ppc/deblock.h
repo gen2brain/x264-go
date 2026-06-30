@@ -1,7 +1,7 @@
 /*****************************************************************************
  * deblock.h: ppc deblocking
  *****************************************************************************
- * Copyright (C) 2017-2022 x264 project
+ * Copyright (C) 2017-2025 x264 project
  *
  * Authors: Anton Mitrofanov <BugMaster@narod.ru>
  *
