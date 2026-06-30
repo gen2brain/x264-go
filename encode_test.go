@@ -284,3 +284,70 @@ func BenchmarkEncodeRGBA(b *testing.B) {
 		}
 	}
 }
+
+// countNALType counts Annex-B NAL units of the given type (byte after a start code, low 5 bits).
+func countNALType(stream []byte, nalType byte) int {
+	n := 0
+	for i := 0; i+3 < len(stream); i++ {
+		if stream[i] == 0 && stream[i+1] == 0 && stream[i+2] == 1 {
+			if stream[i+3]&0x1f == nalType {
+				n++
+			}
+			i += 2
+		}
+	}
+	return n
+}
+
+func TestEncodeKeyframes(t *testing.T) {
+	const idr = 5 // H.264 IDR slice NAL type
+
+	encode := func(o *Options, frames int) []byte {
+		buf := bytes.NewBuffer(nil)
+		enc, err := NewEncoder(buf, o)
+		if err != nil {
+			t.Fatal(err)
+		}
+		img := NewYCbCr(image.Rect(0, 0, o.Width, o.Height))
+		draw.Draw(img, img.Bounds(), image.Black, image.Point{}, draw.Src)
+		for i := 0; i < frames; i++ {
+			img.Set(i%o.Width, o.Height/2, color.RGBA{R: 255, A: 255})
+			if err := enc.Encode(img); err != nil {
+				t.Error(err)
+			}
+		}
+		if err := enc.Flush(); err != nil {
+			t.Error(err)
+		}
+		if err := enc.Close(); err != nil {
+			t.Error(err)
+		}
+		return buf.Bytes()
+	}
+
+	base := func() *Options {
+		return &Options{Width: 320, Height: 240, FrameRate: 30, Preset: "ultrafast", Tune: "zerolatency", Profile: "baseline", LogLevel: LogNone}
+	}
+
+	// Asserts relationships, not absolute counts (sliced-threads emits several IDR NALs per keyframe).
+
+	// Smaller KeyInt → more keyframes.
+	short := base()
+	short.KeyInt = 15
+	long := base()
+	long.KeyInt = 1000
+	shortIDR := countNALType(encode(short, 120), idr)
+	longIDR := countNALType(encode(long, 120), idr)
+	if shortIDR <= longIDR {
+		t.Errorf("smaller KeyInt should yield more IDR keyframes: KeyInt=15 -> %d, KeyInt=1000 -> %d", shortIDR, longIDR)
+	}
+
+	// Intra-refresh leaves only the initial keyframe.
+	refresh := base()
+	refresh.KeyInt = 15
+	refresh.IntraRefresh = true
+	refreshIDR := countNALType(encode(refresh, 120), idr)
+	if refreshIDR >= shortIDR {
+		t.Errorf("IntraRefresh should suppress periodic IDR keyframes: KeyInt=15 -> %d, with IntraRefresh -> %d", shortIDR, refreshIDR)
+	}
+}

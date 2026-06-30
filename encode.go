@@ -39,6 +39,10 @@ type Options struct {
 	Preset string
 	// Profiles: baseline, main, high, high10, high422, high444.
 	Profile string
+	// KeyInt is the maximum interval between keyframes (GOP size) in frames. Defaults to FrameRate when zero.
+	KeyInt int
+	// IntraRefresh uses periodic intra refresh instead of IDR keyframes: lower latency, but no seekable keyframes. Off by default.
+	IntraRefresh bool
 	// RateControl: cqp, crf, abr.
 	RateControl string
 	// Quality target: quantizer for cqp, CRF value for crf.
@@ -117,8 +121,16 @@ func NewEncoder(w io.Writer, opts *Options) (e *Encoder, err error) {
 	param.BRepeatHeaders = 1
 	param.BAnnexb = 1
 
-	param.BIntraRefresh = 1
-	param.IKeyintMax = int32(e.opts.FrameRate)
+	if e.opts.IntraRefresh {
+		param.BIntraRefresh = 1
+	}
+
+	keyint := e.opts.FrameRate
+	if e.opts.KeyInt > 0 {
+		keyint = e.opts.KeyInt
+	}
+	param.IKeyintMax = int32(keyint)
+
 	param.IFpsNum = uint32(e.opts.FrameRate)
 	param.IFpsDen = 1
 
