@@ -39,10 +39,14 @@ type Options struct {
 	Profile string
 	// RateControl: cqp, crf, abr.
 	RateControl string
-	// RateConstant.
+	// Quality target: quantizer for cqp, CRF value for crf.
 	RateConstant float32
-	// RateMax.
+	// Upper bound: max quantizer for cqp, max CRF for crf, VBV max bitrate (kbit/s) for abr.
 	RateMax float32
+	// Target average bitrate (kbit/s). Required for abr.
+	Bitrate int
+	// VBV buffer size (kbit). Optional; bounds rate fluctuation when RateMax is set for abr.
+	VbvBufferSize int
 	// Log level.
 	LogLevel int32
 }
@@ -134,9 +138,19 @@ func NewEncoder(w io.Writer, opts *Options) (e *Encoder, err error) {
 				param.Rc.FRfConstantMax = e.opts.RateMax
 			}
 		case "abr":
+			if e.opts.Bitrate <= 0 {
+				err = fmt.Errorf("x264: abr rate control requires Options.Bitrate > 0")
+				return
+			}
 			param.Rc.IRcMethod = x264c.RcAbr
+			param.Rc.IBitrate = int32(e.opts.Bitrate)
 			if e.opts.RateMax != 0 {
 				param.Rc.IVbvMaxBitrate = int32(e.opts.RateMax)
+				if e.opts.VbvBufferSize != 0 {
+					param.Rc.IVbvBufferSize = int32(e.opts.VbvBufferSize)
+				} else {
+					param.Rc.IVbvBufferSize = int32(e.opts.RateMax)
+				}
 			}
 		}
 	}

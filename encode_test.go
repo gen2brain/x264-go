@@ -102,6 +102,73 @@ func TestEncodeFlush(t *testing.T) {
 	}
 }
 
+func TestEncodeAbr(t *testing.T) {
+	buf := bytes.NewBuffer(make([]byte, 0))
+
+	opts := &Options{
+		Width:         640,
+		Height:        480,
+		FrameRate:     25,
+		Tune:          "zerolatency",
+		Preset:        "veryfast",
+		Profile:       "baseline",
+		RateControl:   "abr",
+		Bitrate:       500,
+		RateMax:       600,
+		VbvBufferSize: 600,
+		LogLevel:      LogDebug,
+	}
+
+	enc, err := NewEncoder(buf, opts)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	img := NewYCbCr(image.Rect(0, 0, opts.Width, opts.Height))
+	draw.Draw(img, img.Bounds(), image.Black, image.ZP, draw.Src)
+
+	for i := 0; i < opts.Width/2; i++ {
+		img.Set(i, opts.Height/2, color.RGBA{R: 255, A: 255})
+
+		err = enc.Encode(img)
+		if err != nil {
+			t.Error(err)
+		}
+	}
+
+	err = enc.Flush()
+	if err != nil {
+		t.Error(err)
+	}
+
+	err = enc.Close()
+	if err != nil {
+		t.Error(err)
+	}
+
+	err = os.WriteFile(filepath.Join(os.TempDir(), "test.abr.264"), buf.Bytes(), 0644)
+	if err != nil {
+		t.Error(err)
+	}
+}
+
+func TestEncodeAbrNoBitrate(t *testing.T) {
+	opts := &Options{
+		Width:       640,
+		Height:      480,
+		FrameRate:   25,
+		Preset:      "veryfast",
+		Tune:        "zerolatency",
+		RateControl: "abr",
+		LogLevel:    LogError,
+	}
+
+	_, err := NewEncoder(bytes.NewBuffer(nil), opts)
+	if err == nil {
+		t.Fatal("expected error for abr without Bitrate, got nil")
+	}
+}
+
 func TestEncodeCrf(t *testing.T) {
 	buf := bytes.NewBuffer(make([]byte, 0))
 
