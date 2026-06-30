@@ -216,3 +216,42 @@ func TestEncodeCrf(t *testing.T) {
 		t.Error(err)
 	}
 }
+
+func TestEncodeMixedTypesNoAlias(t *testing.T) {
+	opts := &Options{
+		Width:     64,
+		Height:    64,
+		FrameRate: 25,
+		Preset:    "ultrafast",
+		Tune:      "zerolatency",
+		LogLevel:  LogError,
+	}
+
+	enc, err := NewEncoder(bytes.NewBuffer(nil), opts)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer enc.Close()
+
+	yc := NewYCbCr(image.Rect(0, 0, opts.Width, opts.Height))
+	draw.Draw(yc, yc.Bounds(), image.Black, image.ZP, draw.Src)
+	yc.Y[0] = 200
+	yPtr := &yc.Y[0]
+
+	if err = enc.Encode(yc); err != nil {
+		t.Fatal(err)
+	}
+
+	// Encoding a different frame type must not rebind or mutate the caller's YCbCr.
+	rgba := image.NewRGBA(image.Rect(0, 0, opts.Width, opts.Height))
+	if err = enc.Encode(rgba); err != nil {
+		t.Fatal(err)
+	}
+
+	if &yc.Y[0] != yPtr {
+		t.Error("caller YCbCr.Y backing array was rebound by the encoder")
+	}
+	if yc.Y[0] != 200 {
+		t.Errorf("caller YCbCr.Y was mutated: got %d, want 200", yc.Y[0])
+	}
+}

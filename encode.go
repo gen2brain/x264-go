@@ -191,15 +191,18 @@ func NewEncoder(w io.Writer, opts *Options) (e *Encoder, err error) {
 func (e *Encoder) Encode(im image.Image) (err error) {
 	var picOut x264c.Picture
 
-	_, rgba := im.(*image.RGBA)
-	_, ycbcr := im.(*YCbCr)
+	// Planes to encode: caller's image for *YCbCr (read-only), else e.img scratch.
+	var src *YCbCr
 
-	if rgba {
-		e.img.ToYCbCr(im)
-	} else if ycbcr {
-		e.img = im.(*YCbCr)
-	} else {
+	switch m := im.(type) {
+	case *YCbCr:
+		src = m
+	case *image.RGBA:
+		e.img.ToYCbCr(m)
+		src = e.img
+	default:
 		e.img.ToYCbCrDraw(im)
+		src = e.img
 	}
 
 	picIn := e.picIn
@@ -211,9 +214,9 @@ func (e *Encoder) Encode(im image.Image) (err error) {
 	picIn.Img.IStride[1] = int32(e.opts.Width) / 2
 	picIn.Img.IStride[2] = int32(e.opts.Width) / 2
 
-	picIn.Img.Plane[0] = C.CBytes(e.img.Y)
-	picIn.Img.Plane[1] = C.CBytes(e.img.Cb)
-	picIn.Img.Plane[2] = C.CBytes(e.img.Cr)
+	picIn.Img.Plane[0] = C.CBytes(src.Y)
+	picIn.Img.Plane[1] = C.CBytes(src.Cb)
+	picIn.Img.Plane[2] = C.CBytes(src.Cr)
 
 	picIn.IPts = e.pts
 	e.pts++
