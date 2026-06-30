@@ -10,8 +10,10 @@ import (
 	"fmt"
 	"image"
 	"io"
+	"unsafe"
 
 	"github.com/gen2brain/x264-go/x264c"
+	"github.com/gen2brain/x264-go/yuv"
 )
 
 // Logging constants.
@@ -59,6 +61,11 @@ type Encoder struct {
 	img  *YCbCr
 	opts *Options
 
+	proc   yuv.ImgProcessor
+	planes [3]unsafe.Pointer
+	ySize  int
+	cSize  int
+
 	csp int32
 	pts int64
 	dts int64
@@ -83,6 +90,10 @@ func NewEncoder(w io.Writer, opts *Options) (e *Encoder, err error) {
 
 	e.nals = make([]*x264c.Nal, 3)
 	e.img = NewYCbCr(image.Rect(0, 0, e.opts.Width, e.opts.Height))
+
+	e.proc = yuv.NewYuvImgProcessor(e.opts.Width, e.opts.Height)
+	e.ySize = e.opts.Width * e.opts.Height
+	e.cSize = e.ySize / 4
 
 	param := x264c.Param{}
 
@@ -181,8 +192,14 @@ func NewEncoder(w io.Writer, opts *Options) (e *Encoder, err error) {
 
 		if int(ret) != n {
 			err = fmt.Errorf("x264: error writing headers, size=%d, n=%d", ret, n)
+			return
 		}
 	}
+
+	// Persistent C-side plane buffers, reused by every Encode and freed in Close.
+	e.planes[0] = C.malloc(C.size_t(e.ySize))
+	e.planes[1] = C.malloc(C.size_t(e.cSize))
+	e.planes[2] = C.malloc(C.size_t(e.cSize))
 
 	return
 }
@@ -198,12 +215,19 @@ func (e *Encoder) Encode(im image.Image) (err error) {
 	case *YCbCr:
 		src = m
 	case *image.RGBA:
-		e.img.ToYCbCr(m)
+		buf := e.proc.Process(m).Get()
+		e.img.Y = buf[:e.ySize]
+		e.img.Cb = buf[e.ySize : e.ySize+e.cSize]
+		e.img.Cr = buf[e.ySize+e.cSize:]
 		src = e.img
 	default:
 		e.img.ToYCbCrDraw(im)
 		src = e.img
 	}
+
+	copy(unsafe.Slice((*byte)(e.planes[0]), e.ySize), src.Y)
+	copy(unsafe.Slice((*byte)(e.planes[1]), e.cSize), src.Cb)
+	copy(unsafe.Slice((*byte)(e.planes[2]), e.cSize), src.Cr)
 
 	picIn := e.picIn
 
@@ -214,18 +238,12 @@ func (e *Encoder) Encode(im image.Image) (err error) {
 	picIn.Img.IStride[1] = int32(e.opts.Width) / 2
 	picIn.Img.IStride[2] = int32(e.opts.Width) / 2
 
-	picIn.Img.Plane[0] = C.CBytes(src.Y)
-	picIn.Img.Plane[1] = C.CBytes(src.Cb)
-	picIn.Img.Plane[2] = C.CBytes(src.Cr)
+	picIn.Img.Plane[0] = e.planes[0]
+	picIn.Img.Plane[1] = e.planes[1]
+	picIn.Img.Plane[2] = e.planes[2]
 
 	picIn.IPts = e.pts
 	e.pts++
-
-	defer func() {
-		picIn.FreePlane(0)
-		picIn.FreePlane(1)
-		picIn.FreePlane(2)
-	}()
 
 	ret := x264c.EncoderEncode(e.e, e.nals, &e.nnals, &picIn, &picOut)
 	if ret < 0 {
@@ -291,5 +309,10 @@ func (e *Encoder) Close() error {
 	picIn := e.picIn
 	x264c.PictureClean(&picIn)
 	x264c.EncoderClose(e.e)
+
+	C.free(e.planes[0])
+	C.free(e.planes[1])
+	C.free(e.planes[2])
+
 	return nil
 }

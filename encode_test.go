@@ -5,6 +5,7 @@ import (
 	"image"
 	"image/color"
 	"image/draw"
+	"io"
 	"os"
 	"path/filepath"
 	"testing"
@@ -253,5 +254,33 @@ func TestEncodeMixedTypesNoAlias(t *testing.T) {
 	}
 	if yc.Y[0] != 200 {
 		t.Errorf("caller YCbCr.Y was mutated: got %d, want 200", yc.Y[0])
+	}
+}
+
+func BenchmarkEncodeRGBA(b *testing.B) {
+	opts := &Options{
+		Width:     640,
+		Height:    480,
+		FrameRate: 25,
+		Preset:    "ultrafast",
+		Tune:      "zerolatency",
+		LogLevel:  LogNone,
+	}
+
+	enc, err := NewEncoder(io.Discard, opts)
+	if err != nil {
+		b.Fatal(err)
+	}
+	defer enc.Close()
+
+	img := image.NewRGBA(image.Rect(0, 0, opts.Width, opts.Height))
+	draw.Draw(img, img.Bounds(), &image.Uniform{color.RGBA{R: 80, G: 160, B: 240, A: 255}}, image.Point{}, draw.Src)
+
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		if err := enc.Encode(img); err != nil {
+			b.Fatal(err)
+		}
 	}
 }
