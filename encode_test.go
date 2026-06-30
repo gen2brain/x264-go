@@ -30,7 +30,7 @@ func TestEncode(t *testing.T) {
 	}
 
 	img := NewYCbCr(image.Rect(0, 0, opts.Width, opts.Height))
-	draw.Draw(img, img.Bounds(), image.Black, image.ZP, draw.Src)
+	draw.Draw(img, img.Bounds(), image.Black, image.Point{}, draw.Src)
 
 	for i := 0; i < opts.Width/2; i++ {
 		img.Set(i, opts.Height/2, color.RGBA{R: 255, A: 255})
@@ -76,7 +76,7 @@ func TestEncodeFlush(t *testing.T) {
 	}
 
 	img := NewYCbCr(image.Rect(0, 0, opts.Width, opts.Height))
-	draw.Draw(img, img.Bounds(), image.Black, image.ZP, draw.Src)
+	draw.Draw(img, img.Bounds(), image.Black, image.Point{}, draw.Src)
 
 	for i := 0; i < opts.Width/2; i++ {
 		img.Set(i, opts.Height/2, color.RGBA{R: 255, A: 255})
@@ -126,7 +126,7 @@ func TestEncodeAbr(t *testing.T) {
 	}
 
 	img := NewYCbCr(image.Rect(0, 0, opts.Width, opts.Height))
-	draw.Draw(img, img.Bounds(), image.Black, image.ZP, draw.Src)
+	draw.Draw(img, img.Bounds(), image.Black, image.Point{}, draw.Src)
 
 	for i := 0; i < opts.Width/2; i++ {
 		img.Set(i, opts.Height/2, color.RGBA{R: 255, A: 255})
@@ -191,7 +191,7 @@ func TestEncodeCrf(t *testing.T) {
 	}
 
 	img := NewYCbCr(image.Rect(0, 0, opts.Width, opts.Height))
-	draw.Draw(img, img.Bounds(), image.Black, image.ZP, draw.Src)
+	draw.Draw(img, img.Bounds(), image.Black, image.Point{}, draw.Src)
 
 	for i := 0; i < opts.Width/2; i++ {
 		img.Set(i, opts.Height/2, color.RGBA{R: 255, A: 255})
@@ -235,7 +235,7 @@ func TestEncodeMixedTypesNoAlias(t *testing.T) {
 	defer enc.Close()
 
 	yc := NewYCbCr(image.Rect(0, 0, opts.Width, opts.Height))
-	draw.Draw(yc, yc.Bounds(), image.Black, image.ZP, draw.Src)
+	draw.Draw(yc, yc.Bounds(), image.Black, image.Point{}, draw.Src)
 	yc.Y[0] = 200
 	yPtr := &yc.Y[0]
 
