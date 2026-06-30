@@ -1,11 +1,11 @@
 ## x264-go
 [![Build Status](https://github.com/gen2brain/x264-go/actions/workflows/build.yml/badge.svg)](https://github.com/gen2brain/x264-go/actions)
-[![GoDoc](https://godoc.org/github.com/gen2brain/x264-go?status.svg)](https://godoc.org/github.com/gen2brain/x264-go) 
+[![Go Reference](https://pkg.go.dev/badge/github.com/gen2brain/x264-go.svg)](https://pkg.go.dev/github.com/gen2brain/x264-go) 
 [![Go Report Card](https://goreportcard.com/badge/github.com/gen2brain/x264-go?branch=master)](https://goreportcard.com/report/github.com/gen2brain/x264-go) 
 
 `x264-go` provides H.264/MPEG-4 AVC codec encoder based on [x264](https://www.videolan.org/developers/x264.html) library.
 
-C source code is included in package. If you want to use external shared/static library (i.e. built with asm and/or OpenCL) use `-tags extlib`
+C source code is included in package. If you want to use an external shared/static library (i.e., built with asm and/or OpenCL) use `-tags extlib`
 
 ### Installation
 
@@ -54,7 +54,7 @@ func main() {
 	}
 
 	img := x264.NewYCbCr(image.Rect(0, 0, opts.Width, opts.Height))
-	draw.Draw(img, img.Bounds(), image.Black, image.ZP, draw.Src)
+	draw.Draw(img, img.Bounds(), image.Black, image.Point{}, draw.Src)
 
 	for i := 0; i < opts.Width/2; i++ {
 		img.Set(i, opts.Height/2, color.RGBA{255, 0, 0, 255})
